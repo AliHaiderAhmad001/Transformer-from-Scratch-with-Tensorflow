@@ -8,4 +8,4 @@ The Transformer architecture is a popular model architecture used for various na
 
 The Transformer architecture consists of two main components: the encoder and the decoder. Both the encoder and decoder are composed of multiple layers of self-attention and feed-forward neural networks. The key idea behind the Transformer is the use of self-attention mechanisms, which allow the model to focus on different parts of the input sequence when generating the output:
 
-![Transformer Arc](imgs/transformer_arch.png)
+![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
