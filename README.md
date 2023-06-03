@@ -35,11 +35,9 @@ Here is a high-level overview of the Transformer architecture (I'll explain each
 * The decoder also consists of a stack of identical decoder layers. Each decoder layer has two self-attention mechanisms: a `masked multi-head self-attention` mechanism to prevent the decoder from looking ahead, and a `cross-attention` mechanism that allows the decoder to attend to the encoder's output.
 * The decoder generates the output sequence.
 
+تأخذ وحدة فك التشفير التمثيلات من المشفّر كدخل، جنبًا إلى جنب مع الجملة الهدف. كما في وحدة المُشفّر؛ تُمرّر سلسلة الدخل إلى `طبقة تضمين` تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك `ترميّز موضعي`.
 
-* تأخذ وحدة فك التشفير التمثيلات من المشفّر كدخل، جنبًا إلى جنب مع الجملة الهدف.
-* كما في وحدة المُشفّر؛ تُمرّر سلسلة الدخل إلى `طبقة تضمين` تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك `ترميّز موضعي`.
-* تحتوي كل طبقة من طبقات وحدة فك التشفير على آليتين للانتباه الذاتي: آلية `الانتباه الذاتي متعدد الرؤوس المُقنّعة` لمنع وحدة فك التشفير من النظر إلى الأمام ، وآلية "الانتباه المتبادل" التي تسمح لوحدة فك التشفير بالوصول إلى خرج المشفّر.
-* تقوم وحدة فك التشفير بتوليد سلسلة الخرج (الجملة بعد الترجمة.
+تحتوي كل طبقة من طبقات وحدة فك التشفير على آليتين للانتباه الذاتي: آلية `الانتباه الذاتي متعدد الرؤوس المُقنّعة` لمنع وحدة فك التشفير من النظر إلى الأمام ، وآلية "الانتباه المتبادل" التي تسمح لوحدة فك التشفير بالوصول إلى خرج المشفّر. تقوم وحدة فك التشفير بتوليد سلسلة الخرج (الجملة بعد الترجمة.
 
 
 3. Positional Encoding:
@@ -47,12 +45,12 @@ Here is a high-level overview of the Transformer architecture (I'll explain each
 * The positional encoding is added to the embedded input and provides the model with the positional information necessary for capturing sequential relationships.
 
 
-* يُستخدم الترميز الموضعي لإضافة معلومات المواقع للوحدات النصية إلى النموذج (بدونها لايمكن للنموذح فهم ترتيب الكلمات في الجملة).
+يُستخدم الترميز الموضعي لإضافة معلومات المواقع للوحدات النصية إلى النموذج (بدونها لايمكن للنموذح فهم ترتيب الكلمات في الجملة).
 
 4. Final Linear Layer:
 * The output of the decoder is passed through a linear layer followed by a softmax activation function to produce the probability distribution over the target vocabulary.
 
-* يتم تمرير خرج وحدة فك التشفير إلى طبقة خطية متبوعة بدالة تنشيط `Softmax` لإنتاج التوزيع الاحتمالي على المفردات المستهدفة.
+يتم تمرير خرج وحدة فك التشفير إلى طبقة خطية متبوعة بدالة تنشيط `Softmax` لإنتاج التوزيع الاحتمالي على المفردات المستهدفة.
 
 
 
