@@ -58,8 +58,12 @@ The following figure shows encoder-decoder architecture of the transformer, with
 
 **Note:** This figure represents the the "inference phase". Here it should be noted that the decoder’s mechanism in the inference phase is slightly different in the training phase, and we will understand that later.
 
+يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي: 
 
-![Encoder-decoder examble](imgs/Transformer.jpg)
+** ملاحظة: ** هذا الشكل يمثل "مرحلة الاستدلال". هنا تجدر الإشارة إلى أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً في مرحلة التدريب، وسنفهم ذلك لاحقًا.
+
+
+![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
 
 
 **We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture:**
