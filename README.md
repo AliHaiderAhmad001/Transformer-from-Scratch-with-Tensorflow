@@ -96,7 +96,7 @@ text_file = pathlib.Path(text_file).parent / "fra.txt"
 ```
 The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French).
 
-### Parsing the data
+### Data preparation
 We prepend the token "[start]" and we append the token "[end]" to the French sentence.
 
 ```
@@ -143,7 +143,63 @@ Numper of token in english sequences: 14969
 Numper of token in french sequences: 29219
 ```
 
+Let's split the sentence pairs into a training set, a validation set, and a test set.
+```
+random.shuffle(text_pairs)
+num_val_samples = int(0.15 * len(text_pairs))
+num_train_samples = len(text_pairs) - 2 * num_val_samples
+train_pairs = text_pairs[:num_train_samples]
+val_pairs = text_pairs[num_train_samples : num_train_samples + num_val_samples]
+test_pairs = text_pairs[num_train_samples + num_val_samples :]
+
+print(f"{len(text_pairs)} total pairs")
+print(f"{len(train_pairs)} training pairs")
+print(f"{len(val_pairs)} validation pairs")
+print(f"{len(test_pairs)} test pairs")
+```
+```
+Output:
+167130 total pairs
+116992 training pairs
+25069 validation pairs
+25069 test pairs
+```
+
 ### Vectorizing the text data
 
-We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). 
+We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). 
+
+```
+from tensorflow.keras.layers import TextVectorization
+
+vocab_size_en = 14969
+vocab_size_fr = 29219
+seq_length = 70
+
+eng_vectorizer = TextVectorization(
+    max_tokens=vocab_size_en,
+    standardize=None,
+    split="whitespace",
+    output_mode="int",
+    output_sequence_length=seq_length,
+)
+fra_vectorizer = TextVectorization(
+    max_tokens=vocab_size_fr,
+    standardize=None,
+    split="whitespace",
+    output_mode="int",
+    output_sequence_length=seq_length
+)
+
+train_eng_texts = [pair[0] for pair in train_pairs]
+train_fra_texts = [pair[1] for pair in train_pairs]
+eng_vectorizer.adapt(train_eng_texts)
+fra_vectorizer.adapt(train_fra_texts)
+```
+
+### Making dataset
+
+```
+
+```
 
