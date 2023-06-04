@@ -78,5 +78,72 @@ The following figure shows encoder-decoder architecture of the transformer, with
 يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS.
 
 
+## Model Implementation
+Here are the steps to build an English to French translation model using the Transformers architecture
 
+### Download dataset
+
+We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
+```
+import tensorflow as tf
+text_file = tf.keras.utils.get_file(
+    fname="fra-eng.zip",
+    origin="http://storage.googleapis.com/download.tensorflow.org/data/fra-eng.zip",
+    extract=True,
+)
+# File location
+text_file = pathlib.Path(text_file).parent / "fra.txt"
+```
+The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French).
+
+### Parsing the data
+We prepend the token "[start]" and we append the token "[end]" to the French sentence.
+
+```
+import pathlib
+import pickle
+import random
+import re
+import unicodedata
+
+def normalize(line):
+    """Normalize a line of text and split into two at the tab character"""
+    line = unicodedata.normalize("NFKC", line.strip())
+    line = re.sub(r"^([^ \w])(?!\s)", r"\1 ", line)
+    line = re.sub(r"(\s[^ \w])(?!\s)", r"\1 ", line)
+    line = re.sub(r"(?!\s)([^ \w])$", r" \1", line)
+    line = re.sub(r"(?!\s)([^ \w]\s)", r" \1", line)
+    eng, fra = line.split("\t")
+    fra = "[start] " + fra + " [end]"
+    return eng, fra
+
+# normalize each line and separate into English and French
+with open(text_file) as fp:
+    text_pairs = [normalize(line) for line in fp]
+with open("text_pairs.pickle", "wb") as fp:
+    pickle.dump(text_pairs, fp)
+```
+
+Let's look at the data:
+```
+print(f"Each sample of data will look like this: {text_pairs[55805]}")
+print(f"Numper of sampels: {len(text_pairs)}")
+print(f"Max length in english sequences: {max([len(x[0].split()) for x in text_pairs])}")
+print(f"Max length in french sequences: {max([len(x[1].split()) for x in text_pairs])}")
+print(f"Numper of token in english sequences: {len(set(token for s in [x[0].split() for x in text_pairs] for token in s))}")
+print(f"Numper of token in french sequences: {len(set(token for s in [x[1].split() for x in text_pairs] for token in s))}")
+```
+```
+Output:
+Each sample of data will look like this: ('what does he see in her ?', '[start] que lui trouve-t-il  ?  [end]')
+Numper of sampels: 167130
+Max length in english sequences: 51
+Max length in french sequences: 60
+Numper of token in english sequences: 14969
+Numper of token in french sequences: 29219
+```
+
+### Vectorizing the text data
+
+We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). 
 
