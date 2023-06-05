@@ -174,8 +174,9 @@ from tensorflow.keras.layers import TextVectorization
 
 vocab_size_en = 14969
 vocab_size_fr = 29219
-seq_length = 70
+seq_length = 60
 
+# English layer
 eng_vectorizer = TextVectorization(
     max_tokens=vocab_size_en,
     standardize=None,
@@ -183,23 +184,86 @@ eng_vectorizer = TextVectorization(
     output_mode="int",
     output_sequence_length=seq_length,
 )
+# French layer
 fra_vectorizer = TextVectorization(
     max_tokens=vocab_size_fr,
     standardize=None,
     split="whitespace",
     output_mode="int",
-    output_sequence_length=seq_length
+    output_sequence_length=seq_length + 1 # since we'll need to offset the sentence by one step during training.
+                                            
 )
 
 train_eng_texts = [pair[0] for pair in train_pairs]
 train_fra_texts = [pair[1] for pair in train_pairs]
+# Learn the vocabulary
 eng_vectorizer.adapt(train_eng_texts)
 fra_vectorizer.adapt(train_fra_texts)
 ```
 
 ### Making dataset
 
-```
+Now we have to define how we will pass the data to the model. There are several ways to do this:
+* Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
+* Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
+* Use the tf.data dataset.
+
+We'll choose the fourth manner. The benefits of using the tf.data dataset are:
+* The flexibility in handling the data.
+* `Prefetch(n)`: to keep `n` batches in memory ready for the training loop to consume(a.k.a Buffer).
 
 ```
+def format_dataset(eng, fra):
+    eng = eng_vectorizer(eng)
+    fra = fra_vectorizer(fra)
+    return ({"encoder_inputs": eng, "decoder_inputs": fra[:, :-1],},
+            fra[:, 1:])
+def make_dataset(pairs, batch_size=64):
+    eng_texts, fra_texts = zip(*pairs)
+    eng_texts = list(eng_texts)
+    fra_texts = list(fra_texts)
+    dataset = tf.data.Dataset.from_tensor_slices((eng_texts, fra_texts))
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.map(format_dataset)
+    return dataset.shuffle(2048).prefetch(16).cache() # Use in-memory caching to speed up preprocessing.
 
+train_ds = make_dataset(train_pairs)
+val_ds = make_dataset(val_pairs)
+```
+Let'us take a look:
+```
+for inputs, targets in train_ds.take(1):
+    print(f'inputs["encoder_inputs"].shape: {inputs["encoder_inputs"].shape}')
+    print(f'inputs["encoder_inputs"][0]: {inputs["encoder_inputs"][0]}')
+    print(f'inputs["decoder_inputs"].shape: {inputs["decoder_inputs"].shape}')
+    print(f'inputs["decoder_inputs"][0]: {inputs["decoder_inputs"][0]}')
+    print(f"targets.shape: {targets.shape}")
+    print(f"targets[0]: {targets[0]}")
+```
+```
+Output:
+inputs["encoder_inputs"].shape: (64, 70)
+inputs["encoder_inputs"][0]: [4074 8452   34  192 1640 2225   22  342    2    0    0    0    0    0
+    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+    0    0    0    0    0    0    0    0    0    0    0    0    0    0]
+inputs["decoder_inputs"].shape: (64, 69)
+inputs["decoder_inputs"][0]: [    2    74 21948   104  7626     5  1569  2677    76   849     4     3
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0]
+targets.shape: (64, 69)
+targets[0]: [   74 21948   104  7626     5  1569  2677    76   849     4     3     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0     0     0     0
+     0     0     0     0     0     0     0     0     0]
+```
+
+Now, we have our data ready to be fed into a model.
+
+### 
