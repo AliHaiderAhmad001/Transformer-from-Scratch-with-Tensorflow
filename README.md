@@ -206,13 +206,24 @@ fra_vectorizer.adapt(train_fra_texts)
 Now we have to define how we will pass the data to the model. There are several ways to do this:
 * Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
 * Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
-* Use the tf.data dataset.
+* Use the `tf.data` dataset.
 
-We'll choose the fourth manner. The benefits of using the tf.data dataset are:
+We'll choose the fourth manner. The general benefits of using the `tf.data` dataset are:
 * The flexibility in handling the data.
-* `Prefetch(n)`: to keep `n` batches in memory ready for the training loop to consume(a.k.a Buffer).
-
+* It makes feeding the model with data more efficient and fast.
+ 
+**Here are some important functions:**
+    * shuffle(n): Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
+    * batch(): Returns a batch from the buffer.
+    * Prefetch(n): to keep n batches in memory ready for the training loop to consume.
+    * cache(): Efficiently caches the dataset for faster subsequent reads.
+    * map(func): Applying a transform (function) on data batches.
+    * [You can read 1](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
+    * [You can read 2](https://medium.com/@ashraf.dasa/shuffle-the-batched-or-batch-the-shuffled-this-is-the-question-34bbc61a341f)
+    
 ```
+from tensorflow.data import AUTOTUNE
+
 def format_dataset(eng, fra):
     eng = eng_vectorizer(eng)
     fra = fra_vectorizer(fra)
@@ -225,7 +236,7 @@ def make_dataset(pairs, batch_size=64):
     dataset = tf.data.Dataset.from_tensor_slices((eng_texts, fra_texts))
     dataset = dataset.batch(batch_size)
     dataset = dataset.map(format_dataset)
-    return dataset.shuffle(2048).prefetch(16).cache() # Use in-memory caching to speed up preprocessing.
+    return dataset.shuffle(2048).prefetch(AUTOTUNE).cache()
 
 train_ds = make_dataset(train_pairs)
 val_ds = make_dataset(val_pairs)
