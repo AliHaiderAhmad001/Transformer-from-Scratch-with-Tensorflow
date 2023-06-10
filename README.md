@@ -16,7 +16,7 @@ The Transformer architecture consists of two main components: the encoder and th
 ![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
 
 
-### Here is a high-level overview of the Transformer architecture
+**Here is a high-level overview of the Transformer architecture:**
 
 **1. Encoder:**
 * The input sequence is first passed through an `embedding layer`, which maps each token to a continuous vector representation -followed by `positional encoding` to provide information about the position of tokens in the sequence.
@@ -165,7 +165,12 @@ Numper of token in english sequences: 14969
 Numper of token in french sequences: 29219
 ```
 
-**Let's split the sentence pairs into a training set, a validation set, and a test set:**
+### Vectorizing the text data
+
+We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). 
+
+**First of all, let's split the sentence pairs into a training set, a validation set, and a test set:**
+
 ```
 random.shuffle(text_pairs)
 num_val_samples = int(0.15 * len(text_pairs))
@@ -187,9 +192,7 @@ Output:
 25069 test pairs
 ```
 
-### Vectorizing the text data
-
-We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). 
+**Now we'll do Vectorization:**
 
 ```
 from tensorflow.keras.layers import TextVectorization
@@ -233,12 +236,13 @@ fra_vectorizer.adapt(train_fra_texts)
 
 **We'll choose the fourth manner. The general benefits of using the `tf.data` dataset are:**
 
-    * The flexibility in handling the data.
-    * It makes feeding the model with data more efficient and fast.
+* The flexibility in handling the data.
+* It makes feeding the model with data more efficient and fast.
 
 #### What is `tf.data`?
 
 I'm gonna be brief..
+
 `tf.data` is a module in TensorFlow that provides tools for building efficient and scalable input pipelines for machine learning models. It is designed to handle large datasets, facilitate data preprocessing, and enable high-performance data ingestion for training and evaluation. Using tf.data, you can build efficient and scalable input pipelines for training deep learning models.
 
 **Here are some important functions:**
@@ -315,4 +319,109 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 
 Now, we have our data ready to be fed into a model.
 
-### 
+### Transformer Building Blocks
+
+
+### Positional information
+
+Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence.
+
+In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation.
+
+The most commonly used method for positional encoding in transformers is the sinusoidal positional encoding, as introduced in the "Attention Is All You Need" paper by Vaswani et al. The sinusoidal positional encoding is based on the idea that different positions can be represented by a combination of sine and cosine functions with different frequencies.
+
+The formula for the sinusoidal positional encoding is as follows:
+
+    PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+
+where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
+
+By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
+
+Apart from sinusoidal positional encoding, there are other types of positional encodings used in transformers. Some alternatives include:
+
+1. **Learned Positional Embeddings:** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
+
+2. **Relative Positional Encodings:** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
+
+3. **Hybrid Approaches:** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
+
+
+
+The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
+
+In this section we will investigate the two approaches: Learned Positional Embeddings and ٍ Sinusoidal positional encoding. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
+
+```
+import numpy as np
+import tensorflow as tf
+
+def pos_enc_matrix(L, d, n=10000):
+    """Create positional encoding matrix
+
+    Args:
+        L: Input dimension (length)
+        d: Output dimension (depth), even only
+        n: Constant for the sinusoidal functions
+
+    Returns:
+        numpy matrix of floats of dimension L-by-d. At element (k,2i) the value
+        is sin(k/n^(2i/d)) while at element (k,2i+1) the value is cos(k/n^(2i/d))
+    """
+    assert d % 2 == 0, "Output dimension needs to be an even integer"
+    d2 = d//2
+    P = np.zeros((L, d))
+    k = np.arange(L).reshape(-1, 1)     # L-column vector
+    i = np.arange(d2).reshape(1, -1)    # d-row vector
+    denom = np.power(n, -i/d2)          # n**(-2*i/d)
+    args = k / denom                    # (L,d) matrix
+    P[:, ::2] = np.sin(args)
+    P[:, 1::2] = np.cos(args)
+    return P
+
+class PositionalEmbedding(tf.keras.layers.Layer):
+    """Positional embedding layer. Assume tokenized input, transform into
+    embedding and returns positional-encoded output."""
+    def __init__(self, sequence_length, vocab_size, embed_dim, **kwargs):
+        """
+        Args:
+            sequence_length: Input sequence length
+            vocab_size: Input vocab size, for setting up embedding matrix
+            embed_dim: Embedding vector size, for setting up embedding matrix
+        """
+        super().__init__(**kwargs)
+        self.sequence_length = sequence_length
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim     # d_model in paper
+        # token embedding layer: Convert integer token to D-dim float vector
+        self.token_embeddings = tf.keras.layers.Embedding(
+            input_dim=vocab_size, output_dim=embed_dim, mask_zero=True
+        )
+        # positional embedding layer: a matrix of hard-coded sine values
+        matrix = pos_enc_matrix(sequence_length, embed_dim)
+        self.position_embeddings = tf.constant(matrix, dtype="float32")
+
+    def call(self, inputs):
+        """Input tokens convert into embedding vectors then superimposed
+        with position vectors"""
+        embedded_tokens = self.token_embeddings(inputs)
+        return embedded_tokens + self.position_embeddings
+
+    # this layer is using an Embedding layer, which can take a mask
+    # see https://www.tensorflow.org/guide/keras/masking_and_padding#passing_mask_tensors_directly_to_layers
+    def compute_mask(self, *args, **kwargs):
+        return self.token_embeddings.compute_mask(*args, **kwargs)
+
+    def get_config(self):
+        # to make save and load a model using custom layer possible
+        config = super().get_config()
+        config.update({
+            "sequence_length": self.sequence_length,
+            "vocab_size": self.vocab_size,
+            "embed_dim": self.embed_dim,
+        })
+        return config
+```
+
+
