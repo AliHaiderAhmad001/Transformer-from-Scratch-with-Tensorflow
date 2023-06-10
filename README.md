@@ -141,11 +141,7 @@ with open("text_pairs.pickle", "wb") as fp:
 2. It first applies Unicode normalization form NFKC to the line, which converts characters to their standardized forms
    (e.g., converting full-width characters to half-width).
 3. The regular expression substitutions using `re.sub` are performed to add spaces around non-alphanumeric characters in the line.
-   The patterns and replacement expressions are as follows:
-    - `r"^([^ \w])(?!\s)"`: Matches a non-alphanumeric character at the start of the line and adds a space before it.
-    - `r"(\s[^ \w])(?!\s)"`: Matches a non-alphanumeric character preceded by a space and adds a space before it.
-    - `r"(?!\s)([^ \w])$"`: Matches a non-alphanumeric character at the end of the line and adds a space after it.
-    - `r"(?!\s)([^ \w]\s)"`: Matches a non-alphanumeric character followed by a space and adds a space after it.
+   The patterns and replacement expressions are as follows.
 4. The line is then split into two parts at the tab character using line.split("\t"), 
    resulting in the English sentence (eng) and the French sentence (fra).
 5. The [start] and [end] tokens are added to the fra part of the line to indicate the start and end of the sentence.
