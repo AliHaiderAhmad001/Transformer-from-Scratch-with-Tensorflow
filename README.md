@@ -239,6 +239,7 @@ fra_vectorizer.adapt(train_fra_texts)
 * Use the `tf.data` dataset.
 
 **We'll choose the fourth manner. The general benefits of using the `tf.data` dataset are:**
+
     * The flexibility in handling the data.
     * It makes feeding the model with data more efficient and fast.
 
@@ -249,13 +250,13 @@ I'm gonna be brief..
 
 **Here are some important functions:**
 
-    * shuffle(n): Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
-    * batch(n): Generate batches of the dataset, each of size n.
-    * Prefetch(n): to keep n batches/elements in memory ready for the training loop to consume.
-    * cache(): Efficiently caches the dataset for faster subsequent reads.
-    * map(func): Applying a transform (function) on data batches.
-    * [You can read more here](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
-    * [ِAnd here]([https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517)).
+* `shuffle(n)`: Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
+* `batch(n)`: Generate batches of the dataset, each of size n.
+* `prefetch(n)`: to keep n batches/elements in memory ready for the training loop to consume.
+* `cache(): Efficiently caches the dataset for faster subsequent reads.
+* `map(func)`: Applying a transform (function) on data batches.
+* [You can read more here](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
+* [ِAnd here](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517).
     
 ```
 from tensorflow.data import AUTOTUNE
