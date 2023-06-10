@@ -106,16 +106,32 @@ import random
 import re
 import unicodedata
 
+import unicodedata
+import re
+
 def normalize(line):
-    """Normalize a line of text and split into two at the tab character"""
+    """
+    Normalize a line of text and split into two at the tab character
+    Args: The normalize function takes a line of text as input.
+    Return: Normalized English and French sentences as a tuple (eng, fra).
+    """
     line = unicodedata.normalize("NFKC", line.strip())
+    
+    # Perform regular expression substitutions to add spaces around non-alphanumeric characters
     line = re.sub(r"^([^ \w])(?!\s)", r"\1 ", line)
     line = re.sub(r"(\s[^ \w])(?!\s)", r"\1 ", line)
     line = re.sub(r"(?!\s)([^ \w])$", r" \1", line)
     line = re.sub(r"(?!\s)([^ \w]\s)", r" \1", line)
+    
+    # Split the line of text into two parts at the tab character
     eng, fra = line.split("\t")
+    
+    # Add "[start]" and "[end]" tokens to the "fra" part of the line
     fra = "[start] " + fra + " [end]"
+    
+    # Return the normalized English and French sentences
     return eng, fra
+
 
 # normalize each line and separate into English and French
 with open(text_file) as fp:
@@ -123,8 +139,21 @@ with open(text_file) as fp:
 with open("text_pairs.pickle", "wb") as fp:
     pickle.dump(text_pairs, fp)
 ```
+**Explanation of the code:**
+1. The `normalize` function takes a line of text as input.
+2. It first applies Unicode normalization form NFKC to the line, which converts characters to their standardized forms
+   (e.g., converting full-width characters to half-width).
+3. The regular expression substitutions using `re.sub` are performed to add spaces around non-alphanumeric characters in the line.
+   The patterns and replacement expressions are as follows:
+    - `r"^([^ \w])(?!\s)"`: Matches a non-alphanumeric character at the start of the line and adds a space before it.
+    - `r"(\s[^ \w])(?!\s)"`: Matches a non-alphanumeric character preceded by a space and adds a space before it.
+    - `r"(?!\s)([^ \w])$"`: Matches a non-alphanumeric character at the end of the line and adds a space after it.
+    - `r"(?!\s)([^ \w]\s)"`: Matches a non-alphanumeric character followed by a space and adds a space after it.
+4. The line is then split into two parts at the tab character using line.split("\t"), 
+   resulting in the English sentence (eng) and the French sentence (fra).
+5. The [start] and [end] tokens are added to the fra part of the line to indicate the start and end of the sentence.
 
-Let's look at the data:
+**Let's look at the data:**
 ```
 print(f"Each sample of data will look like this: {text_pairs[55805]}")
 print(f"Numper of sampels: {len(text_pairs)}")
@@ -143,7 +172,7 @@ Numper of token in english sequences: 14969
 Numper of token in french sequences: 29219
 ```
 
-Let's split the sentence pairs into a training set, a validation set, and a test set.
+**Let's split the sentence pairs into a training set, a validation set, and a test set:**
 ```
 random.shuffle(text_pairs)
 num_val_samples = int(0.15 * len(text_pairs))
@@ -203,23 +232,27 @@ fra_vectorizer.adapt(train_fra_texts)
 
 ### Making dataset
 
-Now we have to define how we will pass the data to the model. There are several ways to do this:
+**Now we have to define how we will pass the data to the model. There are several ways to do this:**
 * Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
 * Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
 * Use the `tf.data` dataset.
 
-We'll choose the fourth manner. The general benefits of using the `tf.data` dataset are:
-* The flexibility in handling the data.
-* It makes feeding the model with data more efficient and fast.
- 
+**We'll choose the fourth manner. The general benefits of using the `tf.data` dataset are:**
+    * The flexibility in handling the data.
+    * It makes feeding the model with data more efficient and fast.
+
+#### What is `tf.data`?
+I'm gonna be brief..
+`tf.data` is a module in TensorFlow that provides tools for building efficient and scalable input pipelines for machine learning models. It is designed to handle large datasets, facilitate data preprocessing, and enable high-performance data ingestion for training and evaluation. Using tf.data, you can build efficient and scalable input pipelines for training deep learning models.
+
 **Here are some important functions:**
     * shuffle(n): Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
-    * batch(): Returns a batch from the buffer.
-    * Prefetch(n): to keep n batches in memory ready for the training loop to consume.
+    * batch(n): Generate batches of the dataset, each of size n.
+    * Prefetch(n): to keep n batches/elements in memory ready for the training loop to consume.
     * cache(): Efficiently caches the dataset for faster subsequent reads.
     * map(func): Applying a transform (function) on data batches.
-    * [You can read 1](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
-    * [You can read 2](https://medium.com/@ashraf.dasa/shuffle-the-batched-or-batch-the-shuffled-this-is-the-question-34bbc61a341f)
+    * [You can read more here](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
+    * [ِAnd here]([https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517)).
     
 ```
 from tensorflow.data import AUTOTUNE
@@ -233,15 +266,27 @@ def make_dataset(pairs, batch_size=64):
     eng_texts, fra_texts = zip(*pairs)
     eng_texts = list(eng_texts)
     fra_texts = list(fra_texts)
+    
+    # Convert the lists to TensorFlow tensors
+    eng_texts = tf.convert_to_tensor(eng_texts)
+    fra_texts = tf.convert_to_tensor(fra_texts)
+    
+    # Create a TensorFlow dataset from tensors
     dataset = tf.data.Dataset.from_tensor_slices((eng_texts, fra_texts))
+    
+    # Apply dataset transformations
+    dataset = dataset.shuffle(len(pairs))  # Shuffle the entire dataset
     dataset = dataset.batch(batch_size)
-    dataset = dataset.map(format_dataset)
-    return dataset.shuffle(2048).prefetch(AUTOTUNE).cache()
+    dataset = dataset.map(format_dataset, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.prefetch(AUTOTUNE).cache()
+    
+    return dataset
 
 train_ds = make_dataset(train_pairs)
 val_ds = make_dataset(val_pairs)
 ```
-Let'us take a look:
+
+**Let's take a look:**
 ```
 for inputs, targets in train_ds.take(1):
     print(f'inputs["encoder_inputs"].shape: {inputs["encoder_inputs"].shape}')
