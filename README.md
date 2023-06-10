@@ -85,7 +85,7 @@ Here are the steps to build an English to French translation model using the Tra
 
 We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
 ```
-import tensorflow as tf
+import tensorflow as tf, pathlib
 text_file = tf.keras.utils.get_file(
     fname="fra-eng.zip",
     origin="http://storage.googleapis.com/download.tensorflow.org/data/fra-eng.zip",
@@ -105,9 +105,6 @@ import pickle
 import random
 import re
 import unicodedata
-
-import unicodedata
-import re
 
 def normalize(line):
     """
@@ -302,26 +299,22 @@ for inputs, targets in train_ds.take(1):
 ```
 ```
 Output:
-inputs["encoder_inputs"].shape: (64, 70)
-inputs["encoder_inputs"][0]: [4074 8452   34  192 1640 2225   22  342    2    0    0    0    0    0
+inputs["encoder_inputs"].shape: (64, 60)
+inputs["encoder_inputs"][0]: [   3  305  862 1192  559    7  167  182    2    0    0    0    0    0
     0    0    0    0    0    0    0    0    0    0    0    0    0    0
     0    0    0    0    0    0    0    0    0    0    0    0    0    0
     0    0    0    0    0    0    0    0    0    0    0    0    0    0
-    0    0    0    0    0    0    0    0    0    0    0    0    0    0]
-inputs["decoder_inputs"].shape: (64, 69)
-inputs["decoder_inputs"][0]: [    2    74 21948   104  7626     5  1569  2677    76   849     4     3
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0]
-targets.shape: (64, 69)
-targets[0]: [   74 21948   104  7626     5  1569  2677    76   849     4     3     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0     0     0     0
-     0     0     0     0     0     0     0     0     0]
+    0    0    0    0]
+inputs["decoder_inputs"].shape: (64, 60)
+inputs["decoder_inputs"][0]: [  2   6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
+   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0]
+targets.shape: (64, 60)
+targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0]
 ```
 
 Now, we have our data ready to be fed into a model.
