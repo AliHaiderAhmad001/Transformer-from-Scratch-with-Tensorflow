@@ -233,6 +233,7 @@ fra_vectorizer.adapt(train_fra_texts)
 ### Making dataset
 
 **Now we have to define how we will pass the data to the model. There are several ways to do this:**
+
 * Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
 * Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
 * Use the `tf.data` dataset.
@@ -242,10 +243,12 @@ fra_vectorizer.adapt(train_fra_texts)
     * It makes feeding the model with data more efficient and fast.
 
 #### What is `tf.data`?
+
 I'm gonna be brief..
 `tf.data` is a module in TensorFlow that provides tools for building efficient and scalable input pipelines for machine learning models. It is designed to handle large datasets, facilitate data preprocessing, and enable high-performance data ingestion for training and evaluation. Using tf.data, you can build efficient and scalable input pipelines for training deep learning models.
 
 **Here are some important functions:**
+
     * shuffle(n): Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
     * batch(n): Generate batches of the dataset, each of size n.
     * Prefetch(n): to keep n batches/elements in memory ready for the training loop to consume.
