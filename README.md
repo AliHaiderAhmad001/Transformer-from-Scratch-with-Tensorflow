@@ -320,13 +320,96 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 Now, we have our data ready to be fed into a model.
 
 ### Encoder
+The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
-The encoder of the transformer is composed of many layers of encoders stacked above each other. Every layer within the encoder receives a sequence of embeddings and processes them through two sublayers: 
+Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
 
-* Multi-head self-attention layer.
-* Fully connected feed-forward layer that is applied to each input embedding. 
+#### Self-Attention
 
-The output embeddings of each encoder layer have the same size as the inputs, and the primary role of each encoder layer is to alter the input embeddings to create representations that encapsulate contextual information in the sequence. For instance, the word "apple" will be adjusted to be more "company-like" and less "fruit-like" if the words "keynote" or "phone" are nearby.
+Self-attention, also known as intra-attention, is a mechanism in the Transformer architecture that allows an input sequence to attend to other positions within itself. It is a key component of both the encoder and decoder modules in Transformers.
+
+In self-attention, each position in the input sequence generates three vectors: Query (Q), Key (K), and Value (V). These vectors are linear projections of the input embeddings. The self-attention mechanism then computes a weighted sum of the values (V) based on the similarity between the query (Q) and key (K) vectors. The weights are determined by the dot product between the query and key vectors, followed by an application of the softmax function to obtain the attention distribution. This attention distribution represents the importance or relevance of each position to the current position.
+
+The weighted sum of values, weighted by the attention distribution, is the output of the self-attention layer. This output captures the contextual representation of the input sequence by considering the relationships and dependencies between different positions. The self-attention mechanism allows each position to attend to all other positions, enabling the model to capture long-range dependencies and contextual information effectively.
+
+One common implementation of self-attention, known as **scaled dot-product attention**, is widely used and described in the Vaswani et al. paper. This approach involves several steps to calculate the attention scores and update the token embeddings:
+
+1. The token embeddings are projected into three vectors: query, key, and value.
+2. Attention scores are computed by measuring the similarity between the query and key vectors using the dot product. This is efficiently achieved through matrix multiplication of the embeddings. Higher dot product values indicate stronger relationships between the query and key vectors, while low values indicate less similarity. The resulting attention scores form an n × n matrix, where n represents the number of input tokens.
+3. To ensure stability during training, the attention scores are scaled by a factor to normalize their variance. Then, a softmax function is applied to normalize the column values, ensuring they sum up to 1. This produces the attention weights, which also form an n × n matrix.
+4. The token embeddings are updated by multiplying them with their corresponding attention weights and summing the results. This process generates an updated representation for each embedding, taking into account the importance assigned to each token by the attention mechanism.
+
+First of all let's prepare an input on which to test all the building blocks of the model:
+
+```
+import tensorflow as tf
+from transformers import AutoTokenizer, AutoModel
+from transformers import TFAutoModel
+
+model_ckpt = "bert-base-uncased"
+tokenizer = AutoTokenizer.from_pretrained(model_ckpt, from_pt=True)
+model = TFAutoModel.from_pretrained(model_ckpt, from_pt=True)
+token_emb_layer = tf.keras.layers.Embedding(model.config.vocab_size,model.config.hidden_size)
+
+text = "time flies like an arrow"
+inputs = tokenizer(text, add_special_tokens=False, return_tensors="tf")
+inputs_embeds = token_emb_layer(inputs.input_ids)
+tf.shape(inputs_embeds)
+# <tf.Tensor: shape=(3,), dtype=int32, numpy=array([  1,   5, 768], dtype=int32)>
+```
+
+```
+import tensorflow as tf
+
+def scaled_dot_product_attention(query, key, value):
+    """
+    Args:
+        query: query tensor (bs, len, dim).
+        key: key tensor (bs, len, dim).
+        value: value tensor (bs, len, dim).
+    Return:
+        Updated value embeddings.
+    """
+    # Calculate attention scores
+    att_scores = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.cast(tf.shape(query)[-1], dtype=tf.float32))
+
+    # Calculate attention weights
+    att_weights = tf.nn.softmax(att_scores, axis=-1)
+
+    # Update value embeddings
+    updated_value = tf.matmul(att_weights, value)
+
+    return updated_value
+```
+
+Testing:
+
+```
+scaled_dot_product_attention(inputs_embeds, inputs_embeds, inputs_embeds)
+
+"""
+<tf.Tensor: shape=(1, 5, 768), dtype=float32, numpy=
+array([[[ 0.01556429,  0.00374883,  0.02096719, ..., -0.00231908,
+         -0.00910157, -0.01922644],
+        [ 0.0155272 ,  0.00371306,  0.0210163 , ..., -0.00231569,
+         -0.00911147, -0.01903477],
+        [ 0.0154297 ,  0.00385697,  0.02080077, ..., -0.00254198,
+         -0.00929157, -0.0190092 ],
+        [ 0.01515524,  0.00379813,  0.02099808, ..., -0.00259563,
+         -0.00930912, -0.01920566],
+        [ 0.01548781,  0.00350432,  0.02083553, ..., -0.00240597,
+         -0.00937845, -0.01906679]]], dtype=float32)>
+"""
+```
+
+#### Multi-headed attention
+
+In our simple example, we only utilized the embeddings in their original form to calculate attention scores and weights, but that’s far from the whole story. In practical applications, the self-attention layer employs three separate linear transformations on each embedding to generate query, key, and value vectors. These transformations project the embeddings and introduce their own unique learnable parameters. This enables the self-attention layer to concentrate on various semantic aspects of the sequence.
+
+Furthermore, there is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
+
+By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities.
+
 
 ### Positional information
 
