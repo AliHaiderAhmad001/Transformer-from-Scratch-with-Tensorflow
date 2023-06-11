@@ -410,6 +410,65 @@ Furthermore, there is a clear advantage to incorporating multiple sets of linear
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities.
 
+```
+class AttentionHead(tf.keras.layers.Layer):
+    """
+    Attention head implementation.
+
+    Args:
+        head_dim: Dimensionality of the attention head.
+
+    Attributes:
+        head_dim: Dimensionality of the attention head.
+        query_weights: Dense layer for query projection.
+        key_weights: Dense layer for key projection.
+        value_weights: Dense layer for value projection.
+    """
+
+    def __init__(self, head_dim, **kwargs):
+        super().__init__(**kwargs)
+        self.head_dim = head_dim
+        self.query_weights = tf.keras.layers.Dense(head_dim)
+        self.key_weights = tf.keras.layers.Dense(head_dim)
+        self.value_weights = tf.keras.layers.Dense(head_dim)
+
+    def call(self, hidden_state, mask=None):
+        """
+        Applies attention mechanism to the input hidden state.
+
+        Args:
+            hidden_state: Hidden state tensor (bs, len, dim).
+            mask: Padding mask tensor (bs, len, len) or (bs, 1, len) or None.
+
+        Returns:
+            Updated hidden state after applying attention mechanism.
+        """
+        query = self.query_weights(hidden_state)
+        key = self.key_weights(hidden_state)
+        value = self.value_weights(hidden_state)
+
+        attention_scores = scaled_dot_product_attention(query, key, value, mask=mask)
+        return attention_scores
+
+    def get_config(self):
+        """
+        Returns the configuration of the attention head layer.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = super().get_config()
+        config.update({
+            "head_dim": self.head_dim,
+            "query_weights": self.query_weights,
+            "key_weights": self.key_weights,
+            "value_weights": self.value_weights,
+        })
+        return config
+```
+Here we’ve initialized three independent linear layers that apply matrix multiplication to the embedding vectors to produce tensors of shape [batch_size, seq_len, head_dim], where head_dim is the number of dimensions we are projecting into. Although head_dim does not have to be smaller than the number of embedding dimensions of the tokens (embed_dim), in practice it is chosen to be a multiple of embed_dim so that the computation across each head is constant. For example, BERT has 12 attention heads, so the dimension of each head is 768/12 = 64. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
+
+
 
 ### Positional information
 
