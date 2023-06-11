@@ -319,8 +319,14 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 
 Now, we have our data ready to be fed into a model.
 
-### Transformer Building Blocks
+### Encoder
 
+The encoder of the transformer is composed of many layers of encoders stacked above each other. Every layer within the encoder receives a sequence of embeddings and processes them through two sublayers: 
+
+* Multi-head self-attention layer.
+* Fully connected feed-forward layer that is applied to each input embedding. 
+
+The output embeddings of each encoder layer have the same size as the inputs, and the primary role of each encoder layer is to alter the input embeddings to create representations that encapsulate contextual information in the sequence. For instance, the word "apple" will be adjusted to be more "company-like" and less "fruit-like" if the words "keynote" or "phone" are nearby.
 
 ### Positional information
 
