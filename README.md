@@ -361,25 +361,30 @@ tf.shape(inputs_embeds)
 ```
 import tensorflow as tf
 
-def scaled_dot_product_attention(query, key, value):
+def scaled_dot_product_attention(query, key, value, mask=None):
     """
+    Calculates scaled dot-product attention.
+
     Args:
-        query: query tensor (bs, len, dim).
-        key: key tensor (bs, len, dim).
-        value: value tensor (bs, len, dim).
-    Return:
-        Updated value embeddings.
+        query: Query tensor (bs, len_q, dim).
+        key: Key tensor (bs, len_k, dim).
+        value: Value tensor (bs, len_v, dim).
+        mask: Padding mask tensor (bs, len_) or None.
+
+    Returns:
+        Updated value embeddings after applying attention mechanism.
     """
-    # Calculate attention scores
-    att_scores = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.cast(tf.shape(query)[-1], dtype=tf.float32))
+    att_scores = tf.matmul(query, tf.transpose(key, perm=[0, 2, 1])) / tf.math.sqrt(tf.cast(tf.shape(query)[-1], tf.float32))
 
-    # Calculate attention weights
+    if mask is not None:
+        mask = tf.expand_dims(mask, axis=1)
+        att_scores = tf.where(mask == 0, -1e9, att_scores)
+        print(att_scores)
+
     att_weights = tf.nn.softmax(att_scores, axis=-1)
+    n_value = tf.matmul(att_weights, value)
 
-    # Update value embeddings
-    updated_value = tf.matmul(att_weights, value)
-
-    return updated_value
+    return n_value
 ```
 
 Testing:
@@ -411,6 +416,7 @@ Furthermore, there is a clear advantage to incorporating multiple sets of linear
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities.
 
 ```
+
 class AttentionHead(tf.keras.layers.Layer):
     """
     Attention head implementation.
@@ -427,12 +433,14 @@ class AttentionHead(tf.keras.layers.Layer):
 
     def __init__(self, head_dim, **kwargs):
         super().__init__(**kwargs)
+        self.supports_masking = True  # Enable masking support
         self.head_dim = head_dim
         self.query_weights = tf.keras.layers.Dense(head_dim)
         self.key_weights = tf.keras.layers.Dense(head_dim)
         self.value_weights = tf.keras.layers.Dense(head_dim)
+        
 
-    def call(self, hidden_state, mask=None):
+    def call(self, hidden_state, mask = None):
         """
         Applies attention mechanism to the input hidden state.
 
@@ -447,8 +455,9 @@ class AttentionHead(tf.keras.layers.Layer):
         key = self.key_weights(hidden_state)
         value = self.value_weights(hidden_state)
 
-        attention_scores = scaled_dot_product_attention(query, key, value, mask=mask)
+        attention_scores = scaled_dot_product_attention(query, key, value, mask = mask)
         return attention_scores
+
 
     def get_config(self):
         """
@@ -466,9 +475,84 @@ class AttentionHead(tf.keras.layers.Layer):
         })
         return config
 ```
+
 Here we’ve initialized three independent linear layers that apply matrix multiplication to the embedding vectors to produce tensors of shape [batch_size, seq_len, head_dim], where head_dim is the number of dimensions we are projecting into. Although head_dim does not have to be smaller than the number of embedding dimensions of the tokens (embed_dim), in practice it is chosen to be a multiple of embed_dim so that the computation across each head is constant. For example, BERT has 12 attention heads, so the dimension of each head is 768/12 = 64. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
 
+```
 
+
+class MultiHeadAttention(tf.keras.layers.Layer):
+    """
+    Multi-head attention layer implementation.
+
+    Args:
+        config: Configuration object containing hyperparameters.
+    
+    Attributes:
+        supports_masking: Boolean indicating if the layer supports masking.
+        hidden_size: Dimensionality of the hidden state.
+        num_heads: Number of attention heads.
+        head_dim: Dimensionality of each attention head.
+        attention_heads: List of AttentionHead layers.
+        fc: Fully connected layer for final projection.
+
+    """
+
+    def __init__(self, config, **kwargs):
+        super().__init__(**kwargs)
+        self.supports_masking = True
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_heads
+        self.head_dim = config.hidden_size // config.num_heads
+        self.attention_heads = [AttentionHead(self.head_dim) for _ in range(self.num_heads)]
+        self.fc = tf.keras.layers.Dense(config.hidden_size)
+
+    def call(self, hidden_state, mask=None):
+        """
+        Applies multi-head attention mechanism to the input hidden state.
+
+        Args:
+            hidden_state: Hidden state tensor (bs, len, dim).
+            mask: Padding mask tensor (bs, len) or None.
+
+        Returns:
+            Updated hidden state after applying multi-head attention mechanism.
+        """
+        attention_outputs = [attention_head(hidden_state, mask=mask) for attention_head in self.attention_heads]
+        hidden_state = tf.concat(attention_outputs, axis=-1)
+        hidden_state = self.fc(hidden_state)
+        return hidden_state
+
+    def get_config(self):
+        """
+        Returns the configuration of the multi-head attention layer.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = super().get_config()
+        config.update({
+            "hidden_size": self.hidden_size,
+            "num_heads": self.num_heads,
+            "head_dim": self.head_dim,
+            "attention_heads": self.attention_heads,
+            "fc": self.fc,
+        })
+        return config
+```
+
+Notice that the concatenated output from the attention heads is also fed through a final linear layer to produce an output tensor of shape [batch_size, seq_len, hidden_dim] that is suitable for the feed-forward network downstream.
+
+**Testing:**
+
+```
+multihead_attn = MultiHeadAttention(config)
+attn_output = multihead_attn(inputs_embeds)
+attn_output.shape
+# TensorShape([1, 5, 768])
+```
+
+### Decoder
 
 ### Positional information
 
