@@ -320,15 +320,13 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 Now, we have our data ready to be fed into a model.
 
 ### Encoder
-The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
+    The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
-Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
+    Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
 
 #### Self-Attention
 
-Self-attention, also known as intra-attention, is a mechanism in the Transformer architecture that allows an input sequence to attend to other positions within itself. It is a key component of both the encoder and decoder modules in Transformers.
-
-In self-attention, each position in the input sequence generates three vectors: Query (Q), Key (K), and Value (V). These vectors are linear projections of the input embeddings. The self-attention mechanism then computes a weighted sum of the values (V) based on the similarity between the query (Q) and key (K) vectors. The weights are determined by the dot product between the query and key vectors, followed by an application of the softmax function to obtain the attention distribution. This attention distribution represents the importance or relevance of each position to the current position.
+    Self-attention, also known as intra-attention, is a mechanism in the Transformer architecture that allows an input sequence to attend to other positions within itself. It is a key component of both the encoder and decoder modules in Transformers. In self-attention, each position in the input sequence generates three vectors: Query (Q), Key (K), and Value (V). These vectors are linear projections of the input embeddings. The self-attention mechanism then computes a weighted sum of the values (V) based on the similarity between the query (Q) and key (K) vectors. The weights are determined by the dot product between the query and key vectors, followed by an application of the softmax function to obtain the attention distribution. This attention distribution represents the importance or relevance of each position to the current position.
 
 The weighted sum of values, weighted by the attention distribution, is the output of the self-attention layer. This output captures the contextual representation of the input sequence by considering the relationships and dependencies between different positions. The self-attention mechanism allows each position to attend to all other positions, enabling the model to capture long-range dependencies and contextual information effectively.
 
@@ -409,7 +407,7 @@ array([[[ 0.01556429,  0.00374883,  0.02096719, ..., -0.00231908,
 
 #### Multi-headed attention
 
-In our simple example, we only utilized the embeddings in their original form to calculate attention scores and weights, but that’s far from the whole story. In practical applications, the self-attention layer employs three separate linear transformations on each embedding to generate query, key, and value vectors. These transformations project the embeddings and introduce their own unique learnable parameters. This enables the self-attention layer to concentrate on various semantic aspects of the sequence.
+    In our simple example, we only utilized the embeddings in their original form to calculate attention scores and weights, but that’s far from the whole story. In practical applications, the self-attention layer employs three separate linear transformations on each embedding to generate query, key, and value vectors. These transformations project the embeddings and introduce their own unique learnable parameters. This enables the self-attention layer to concentrate on various semantic aspects of the sequence.
 
 Furthermore, there is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
 
@@ -550,6 +548,78 @@ multihead_attn = MultiHeadAttention(config)
 attn_output = multihead_attn(inputs_embeds)
 attn_output.shape
 # TensorShape([1, 5, 768])
+```
+
+#### The Feed-Forward Layer and Normalization
+
+    The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**.
+
+In the literature, a general guideline suggests setting the hidden size of the first layer to be four times the size of the embeddings. Additionally, a GELU activation function is commonly used in this layer. It is believed that this particular sublayer contributes significantly to the model's capacity and memorization abilities. Consequently, when scaling up the models, this layer is often a focal point for adjustment and expansion.
+
+```
+class FeedForward(tf.keras.layers.Layer):
+    """
+    Feed-forward layer implementation.
+
+    Args:
+        config: Configuration object containing hyperparameters.
+
+    Attributes:
+        supports_masking: Boolean indicating if the layer supports masking.
+        fc1: First dense layer.
+        fc2: Second dense layer.
+        dropout: Dropout layer.
+    """
+
+    def __init__(self, config, **kwargs):
+        super().__init__(**kwargs)
+        self.supports_masking = True
+        self.fc1 = tf.keras.layers.Dense(config.intermediate_fc_size, activation=tf.keras.activations.gelu)
+        self.fc2 = tf.keras.layers.Dense(config.hidden_size)
+        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
+
+    def call(self, hidden_state, training=False):
+        """
+        Applies feed-forward transformation to the input hidden state.
+
+        Args:
+            hidden_state: Hidden state tensor (batch_size, sequence_length, hidden_size).
+            training: Boolean indicating whether the model is in training mode or inference mode.
+
+        Returns:
+            Updated hidden state after applying feed-forward transformation.
+        """
+        hidden_state = self.fc1(hidden_state)
+        hidden_state = self.dropout(hidden_state, training=training)
+        hidden_state = self.fc2(hidden_state)
+        return hidden_state
+
+    def get_config(self):
+        """
+        Returns the configuration of the feed-forward layer.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = super().get_config()
+        config.update({
+            "fc1": self.fc1,
+            "fc2": self.fc2,
+            "dropout": self.dropout,
+        })
+        return config
+```
+It is important to note that when using a feed-forward layer like `dense`, it is typically applied to a tensor with a shape of `(batch_size, input_dim)`. In this case, the layer operates independently on each element of the batch dimension. This applies to all dimensions except for the last one. Therefore, when we pass a tensor with a shape of `(batch_size, seq_len, hidden_dim)`, the feed-forward layer is applied to each token embedding of the batch and sequence separately, which aligns perfectly with our desired behavior.
+
+**Adding Layer Normalization:**
+
+    When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
+
+#### Wrap up
+
+Now that we've built all the main parts of the encoder block, we'll put them together to build it:
+```
+
 ```
 
 ### Decoder
