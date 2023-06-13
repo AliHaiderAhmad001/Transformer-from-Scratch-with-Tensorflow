@@ -481,7 +481,7 @@ By using sinusoidal positional encoding, the model can differentiate between tok
 
 #### Learned Positional Embeddings
 
-    Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
+Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
 Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings or intermediate representations of the model.
 
 ```
