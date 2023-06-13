@@ -319,6 +319,120 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 
 Now, we have our data ready to be fed into a model.
 
+### Positional information
+
+    Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
+
+1. **Learned Positional Embeddings:** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
+
+2. **Relative Positional Encodings:** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
+
+3. **Hybrid Approaches:** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
+
+The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
+
+In this section we will investigate the two approaches: **Learned Positional Embeddings** and ٍ **Sinusoidal positional encoding**. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
+
+#### Sinusoidal positional encoding
+
+    The most commonly used method for positional encoding in transformers is the sinusoidal positional encoding, as introduced in the "Attention Is All You Need" paper by Vaswani et al. The sinusoidal positional encoding is based on the idea that different positions can be represented by a combination of sine and cosine functions with different frequencies. The formula for the sinusoidal positional encoding is as follows:
+
+    PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+
+where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
+
+```
+import numpy as np
+import tensorflow as tf
+
+def pos_enc_matrix(L, d, n=10000):
+    """Create positional encoding matrix
+
+    Args:
+        L: Input dimension (length)
+        d: Output dimension (depth), even only
+        n: Constant for the sinusoidal functions
+
+    Returns:
+        numpy matrix of floats of dimension L-by-d. At element (k,2i) the value
+        is sin(k/n^(2i/d)) while at element (k,2i+1) the value is cos(k/n^(2i/d))
+    """
+    assert d % 2 == 0, "Output dimension needs to be an even integer"
+    d2 = d//2
+    P = np.zeros((L, d))
+    k = np.arange(L).reshape(-1, 1)     # L-column vector
+    i = np.arange(d2).reshape(1, -1)    # d-row vector
+    denom = np.power(n, -i/d2)          # n**(-2*i/d)
+    args = k / denom                    # (L,d) matrix
+    P[:, ::2] = np.sin(args)
+    P[:, 1::2] = np.cos(args)
+    return P
+
+class PositionalEmbedding(tf.keras.layers.Layer):
+    """Positional embedding layer. Assume tokenized input, transform into
+    embedding and returns positional-encoded output."""
+    def __init__(self, sequence_length, vocab_size, embed_dim, **kwargs):
+        """
+        Args:
+            sequence_length: Input sequence length
+            vocab_size: Input vocab size, for setting up embedding matrix
+            embed_dim: Embedding vector size, for setting up embedding matrix
+        """
+        super().__init__(**kwargs)
+        self.sequence_length = sequence_length
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim     # d_model in paper
+        # token embedding layer: Convert integer token to D-dim float vector
+        self.token_embeddings = tf.keras.layers.Embedding(
+            input_dim=vocab_size, output_dim=embed_dim, mask_zero=True
+        )
+        # positional embedding layer: a matrix of hard-coded sine values
+        matrix = pos_enc_matrix(sequence_length, embed_dim)
+        self.position_embeddings = tf.constant(matrix, dtype="float32")
+
+    def call(self, inputs):
+        """Input tokens convert into embedding vectors then superimposed
+        with position vectors"""
+        embedded_tokens = self.token_embeddings(inputs)
+        return embedded_tokens + self.position_embeddings
+
+    # this layer is using an Embedding layer, which can take a mask
+    # see https://www.tensorflow.org/guide/keras/masking_and_padding#passing_mask_tensors_directly_to_layers
+    def compute_mask(self, *args, **kwargs):
+        return self.token_embeddings.compute_mask(*args, **kwargs)
+
+    def get_config(self):
+        # to make save and load a model using custom layer possible
+        config = super().get_config()
+        config.update({
+            "sequence_length": self.sequence_length,
+            "vocab_size": self.vocab_size,
+            "embed_dim": self.embed_dim,
+        })
+        return config
+```
+
+By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
+
+#### Learned Positional Embeddings
+
+    Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
+Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings or intermediate representations of the model.
+
+```
+
+```
+
+
+By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
+
+### Embedding layer
+
+```
+
+```
+
 ### Encoder
     The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
@@ -615,115 +729,78 @@ It is important to note that when using a feed-forward layer like `dense`, it is
 
     When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
 
-#### Wrap up
+#### Encoder layer
 
-Now that we've built all the main parts of the encoder block, we'll put them together to build it:
+Now that we've built all the main parts of the encoder layer, we'll put them together to build it:
 ```
-
-```
-
-### Decoder
-
-### Positional information
-
-Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence.
-
-In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation.
-
-The most commonly used method for positional encoding in transformers is the sinusoidal positional encoding, as introduced in the "Attention Is All You Need" paper by Vaswani et al. The sinusoidal positional encoding is based on the idea that different positions can be represented by a combination of sine and cosine functions with different frequencies.
-
-The formula for the sinusoidal positional encoding is as follows:
-
-    PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
-    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
-
-where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
-
-By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
-
-Apart from sinusoidal positional encoding, there are other types of positional encodings used in transformers. Some alternatives include:
-
-1. **Learned Positional Embeddings:** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
-
-2. **Relative Positional Encodings:** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
-
-3. **Hybrid Approaches:** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
-
-
-
-The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
-
-In this section we will investigate the two approaches: Learned Positional Embeddings and ٍ Sinusoidal positional encoding. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
-
-```
-import numpy as np
-import tensorflow as tf
-
-def pos_enc_matrix(L, d, n=10000):
-    """Create positional encoding matrix
+class Encoder(tf.keras.layers.Layer):
+    """
+    Encoder layer of the Transformer model.
 
     Args:
-        L: Input dimension (length)
-        d: Output dimension (depth), even only
-        n: Constant for the sinusoidal functions
+        config: Configuration object containing hyperparameters.
 
-    Returns:
-        numpy matrix of floats of dimension L-by-d. At element (k,2i) the value
-        is sin(k/n^(2i/d)) while at element (k,2i+1) the value is cos(k/n^(2i/d))
+    Attributes:
+        supports_masking: Boolean indicating if the layer supports masking.
+        multihead_attention: MultiHeadAttention layer for attention mechanism.
+        norm1: LayerNormalization layer for the first normalization step.
+        norm2: LayerNormalization layer for the second normalization step.
+        feed_forward: FeedForward layer for the feed-forward network.
+        dropout: Dropout layer for regularization.
+
     """
-    assert d % 2 == 0, "Output dimension needs to be an even integer"
-    d2 = d//2
-    P = np.zeros((L, d))
-    k = np.arange(L).reshape(-1, 1)     # L-column vector
-    i = np.arange(d2).reshape(1, -1)    # d-row vector
-    denom = np.power(n, -i/d2)          # n**(-2*i/d)
-    args = k / denom                    # (L,d) matrix
-    P[:, ::2] = np.sin(args)
-    P[:, 1::2] = np.cos(args)
-    return P
 
-class PositionalEmbedding(tf.keras.layers.Layer):
-    """Positional embedding layer. Assume tokenized input, transform into
-    embedding and returns positional-encoded output."""
-    def __init__(self, sequence_length, vocab_size, embed_dim, **kwargs):
-        """
-        Args:
-            sequence_length: Input sequence length
-            vocab_size: Input vocab size, for setting up embedding matrix
-            embed_dim: Embedding vector size, for setting up embedding matrix
-        """
+    def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.sequence_length = sequence_length
-        self.vocab_size = vocab_size
-        self.embed_dim = embed_dim     # d_model in paper
-        # token embedding layer: Convert integer token to D-dim float vector
-        self.token_embeddings = tf.keras.layers.Embedding(
-            input_dim=vocab_size, output_dim=embed_dim, mask_zero=True
-        )
-        # positional embedding layer: a matrix of hard-coded sine values
-        matrix = pos_enc_matrix(sequence_length, embed_dim)
-        self.position_embeddings = tf.constant(matrix, dtype="float32")
+        self.supports_masking = True 
+        self.multihead_attention = MultiHeadAttention(config)
+        self.norm1 = tf.keras.layers.LayerNormalization()
+        self.norm2 = tf.keras.layers.LayerNormalization()
+        self.feed_forward = FeedForward(config)
+        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
+        
 
-    def call(self, inputs):
-        """Input tokens convert into embedding vectors then superimposed
-        with position vectors"""
-        embedded_tokens = self.token_embeddings(inputs)
-        return embedded_tokens + self.position_embeddings
+    def call(self, hidden_state, mask=None, training=False):
+        """
+        Applies the encoder layer to the input hidden state.
 
-    # this layer is using an Embedding layer, which can take a mask
-    # see https://www.tensorflow.org/guide/keras/masking_and_padding#passing_mask_tensors_directly_to_layers
-    def compute_mask(self, *args, **kwargs):
-        return self.token_embeddings.compute_mask(*args, **kwargs)
+        Args:
+            hidden_state: Hidden state tensor (bs, len, dim).
+            mask: Padding mask tensor (bs, len) or None.
+            training: Boolean indicating whether the model is in training mode or inference mode.
+
+        Returns:
+            Updated hidden state after applying the encoder layer.
+
+        """
+        attention_output = self.multihead_attention(hidden_state)  # Apply multi-head attention
+        hidden_state = self.norm1(attention_output + hidden_state)  # Add skip connection and normalize
+        feed_forward_output = self.feed_forward(hidden_state)  # Apply feed-forward layer
+        hidden_state = self.norm2(feed_forward_output + hidden_state)  # Add skip connection and normalize
+        hidden_state = self.dropout(hidden_state, training=training)  # Apply dropout
+        return hidden_state
 
     def get_config(self):
-        # to make save and load a model using custom layer possible
+        """
+        Returns the configuration of the encoder layer.
+
+        Returns:
+            Configuration dictionary.
+
+        """
         config = super().get_config()
         config.update({
-            "sequence_length": self.sequence_length,
-            "vocab_size": self.vocab_size,
-            "embed_dim": self.embed_dim,
+            "multihead_attention": self.multihead_attention,
+            "norm1": self.norm1,
+            "norm2": self.norm2,
+            "feed_forward": self.feed_forward,
+            "dropout": self.dropout,
         })
         return config
 ```
+
+We’ve now implemented our very first transformer encoder layer from scratch!
+
+
 
 
