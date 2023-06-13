@@ -435,7 +435,6 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
             "position_embeddings": self.position_embeddings,
         })
         return config
-
 ```
 
 **Testing:**
@@ -476,6 +475,7 @@ tf.Tensor(
 tf.Tensor([[2 1 0 3]], shape=(1, 4), dtype=int32)
 tf.Tensor([[ True  True False  True]], shape=(1, 4), dtype=bool)
 """
+```
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
 
