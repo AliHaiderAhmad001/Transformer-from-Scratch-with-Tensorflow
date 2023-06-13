@@ -343,75 +343,139 @@ In this section we will investigate the two approaches: **Learned Positional Emb
 where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
 
 ```
-import numpy as np
 import tensorflow as tf
 
-def pos_enc_matrix(L, d, n=10000):
-    """Create positional encoding matrix
+def create_positional_encoding_matrix(sequence_length, embedding_dimension, frequency_factor=10000):
+    """
+    Create a positional encoding matrix.
 
     Args:
-        L: Input dimension (length)
-        d: Output dimension (depth), even only
-        n: Constant for the sinusoidal functions
+        sequence_length (int): Length of the input sequence.
+        embedding_dimension (int): Dimensionality of the positional embeddings. Must be an even integer.
+        frequency_factor (int): Constant for the sinusoidal functions.
 
     Returns:
-        numpy matrix of floats of dimension L-by-d. At element (k,2i) the value
-        is sin(k/n^(2i/d)) while at element (k,2i+1) the value is cos(k/n^(2i/d))
+        tf.Tensor: Matrix of positional embeddings of shape (sequence_length, embedding_dimension).
+        The value at element (k, 2i) is sin(k / frequency_factor^(2i / embedding_dimension)),
+        and the value at element (k, 2i+1) is cos(k / frequency_factor^(2i / embedding_dimension)).
     """
-    assert d % 2 == 0, "Output dimension needs to be an even integer"
-    d2 = d//2
-    P = np.zeros((L, d))
-    k = np.arange(L).reshape(-1, 1)     # L-column vector
-    i = np.arange(d2).reshape(1, -1)    # d-row vector
-    denom = np.power(n, -i/d2)          # n**(-2*i/d)
-    args = k / denom                    # (L,d) matrix
-    P[:, ::2] = np.sin(args)
-    P[:, 1::2] = np.cos(args)
-    return P
+    assert embedding_dimension % 2 == 0, "Embedding dimension needs to be an even integer"
+    embedding_dimension_half = embedding_dimension // 2
+    positions = tf.range(sequence_length, dtype=tf.float32)[:, tf.newaxis]  # Column vector of shape (sequence_length, 1)
+    frequency_indices = tf.range(embedding_dimension_half, dtype=tf.float32)[tf.newaxis, :]  # Row vector of shape (1, embedding_dimension/2)
+    frequency_denominator = tf.pow(frequency_factor, -frequency_indices / embedding_dimension_half)  # frequency_factor^(-2i/d)
+    frequency_arguments = positions / frequency_denominator  # Matrix of shape (sequence_length, embedding_dimension)
+    sin_values = tf.sin(frequency_arguments)
+    cos_values = tf.cos(frequency_arguments)
+    positional_encodings = tf.concat([sin_values, cos_values], axis=1)
+    return positional_encodings
+    
+class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
+    """
+    SinusoidalPositionalEncoding layer.
 
-class PositionalEmbedding(tf.keras.layers.Layer):
-    """Positional embedding layer. Assume tokenized input, transform into
-    embedding and returns positional-encoded output."""
-    def __init__(self, sequence_length, vocab_size, embed_dim, **kwargs):
+    This layer applies sinusoidal positional encodings to the input embeddings.
+
+    Args:
+        config (object): Configuration object containing parameters.
+    """
+    def __init__(self, config, **kwargs):
         """
+        Initialize the SinusoidalPositionalEncoding layer.
+
         Args:
-            sequence_length: Input sequence length
-            vocab_size: Input vocab size, for setting up embedding matrix
-            embed_dim: Embedding vector size, for setting up embedding matrix
+            config (object): Configuration object with parameters for positional encoding.
         """
         super().__init__(**kwargs)
-        self.sequence_length = sequence_length
-        self.vocab_size = vocab_size
-        self.embed_dim = embed_dim     # d_model in paper
-        # token embedding layer: Convert integer token to D-dim float vector
-        self.token_embeddings = tf.keras.layers.Embedding(
-            input_dim=vocab_size, output_dim=embed_dim, mask_zero=True
+        self.sequence_length = config.sequence_length
+        self.position_encoding = create_positional_encoding_matrix(
+            config.sequence_length, config.hidden_size, config.frequency_factor
         )
-        # positional embedding layer: a matrix of hard-coded sine values
-        matrix = pos_enc_matrix(sequence_length, embed_dim)
-        self.position_embeddings = tf.constant(matrix, dtype="float32")
 
-    def call(self, inputs):
-        """Input tokens convert into embedding vectors then superimposed
-        with position vectors"""
-        embedded_tokens = self.token_embeddings(inputs)
-        return embedded_tokens + self.position_embeddings
+    def call(self, input_ids):
+        """
+        Apply positional encodings to the input embeddings.
 
-    # this layer is using an Embedding layer, which can take a mask
-    # see https://www.tensorflow.org/guide/keras/masking_and_padding#passing_mask_tensors_directly_to_layers
-    def compute_mask(self, *args, **kwargs):
-        return self.token_embeddings.compute_mask(*args, **kwargs)
+        Args:
+            input_ids (tf.Tensor): Input tensor containing token IDs.
+
+        Returns:
+            tf.Tensor: Output tensor with positional encodings added.
+        """
+        if input_ids.shape[1] != self.sequence_length:
+            self.position_encoding = create_positional_encoding_matrix(
+                input_ids.shape[1], config.hidden_size, config.frequency_factor
+            )
+        return self.position_encoding 
+
+    def compute_mask(self, input_ids, mask=None):
+        """
+        Compute the mask for the input IDs.
+
+        Args:
+            input_ids (tf.Tensor): Input tensor containing token IDs.
+            mask (tf.Tensor): Optional mask tensor.
+
+        Returns:
+            tf.Tensor: Computed mask tensor.
+        """
+        if not self.mask_zero:
+            return None
+        return tf.not_equal(input_ids, 0)
 
     def get_config(self):
-        # to make save and load a model using custom layer possible
+        """
+        Get the configuration of the SinusoidalPositionalEncoding layer.
+
+        Returns:
+            dict: Configuration dictionary.
+        """
         config = super().get_config()
         config.update({
-            "sequence_length": self.sequence_length,
-            "vocab_size": self.vocab_size,
-            "embed_dim": self.embed_dim,
+            "position_embeddings": self.position_embeddings,
         })
         return config
+
 ```
+
+**Testing:**
+```
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.mask_zero = True
+
+config = Config()
+
+# Create an instance of the SinusoidalPositionalEncoding layer
+positional_encoding_layer = SinusoidalPositionalEncoding(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply positional encodings
+output_embeddings = positional_encoding_layer(input_ids)
+
+# Print the output positional embeddings
+print("Outputs:")
+print(output_embeddings)
+print(input_ids)
+print(output_embeddings._keras_mask)
+"""
+Outputs:
+tf.Tensor(
+[[ 0.          0.          1.          1.        ]
+ [ 0.84147096 -0.50636566  0.5403023   0.8623189 ]
+ [ 0.9092974  -0.87329733 -0.4161468   0.48718765]
+ [ 0.14112    -0.99975586 -0.9899925  -0.02209662]], shape=(4, 4), dtype=float32)
+tf.Tensor([[2 1 0 3]], shape=(1, 4), dtype=int32)
+tf.Tensor([[ True  True False  True]], shape=(1, 4), dtype=bool)
+"""
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
 
@@ -421,9 +485,56 @@ By using sinusoidal positional encoding, the model can differentiate between tok
 Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings or intermediate representations of the model.
 
 ```
+import tensorflow as tf
+
+class PositionalEmbeddings(tf.keras.layers.Layer):
+    """
+    PositionalEmbeddings layer.
+
+    This layer generates positional embeddings based on input IDs.
+    It uses an Embedding layer to map position IDs to position embeddings.
+
+    Args:
+        config (object): Configuration object containing parameters.
+    """
+
+    def __init__(self, config, **kwargs):
+        super(PositionalEmbeddings, self).__init__(**kwargs)
+        self.supports_masking = True
+        self.positional_embeddings = tf.keras.layers.Embedding(
+            input_dim=config.max_position_embeddings, output_dim=config.hidden_size,
+            mask_zero=True
+        )
+
+    def call(self, input_ids):
+        """
+        Generate positional embeddings.
+
+        Args:
+            input_ids (tf.Tensor): Input tensor containing token IDs.
+
+        Returns:
+            tf.Tensor: Positional embeddings tensor of shape (batch_size, seq_length, hidden_size).
+        """
+        seq_length = input_ids.shape[1]
+        position_ids = tf.range(seq_length, dtype=tf.int32)[tf.newaxis, :]
+        position_embeddings = self.positional_embeddings(position_ids)
+        return position_embeddings
+
+    def get_config(self):
+        """
+        Get the layer configuration.
+
+        Returns:
+            dict: Dictionary containing the layer configuration.
+        """
+        config = super().get_config()
+        config.update({
+            "positional_embeddings": self.positional_embeddings,
+        })
+        return config
 
 ```
-
 
 By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
 
