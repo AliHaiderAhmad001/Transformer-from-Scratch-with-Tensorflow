@@ -369,7 +369,7 @@ def create_positional_encoding_matrix(sequence_length, embedding_dimension, freq
     cos_values = tf.cos(frequency_arguments)
     positional_encodings = tf.concat([sin_values, cos_values], axis=1)
     return positional_encodings
-    
+
 class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
     """
     SinusoidalPositionalEncoding layer.
@@ -406,22 +406,7 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
             self.position_encoding = create_positional_encoding_matrix(
                 input_ids.shape[1], config.hidden_size, config.frequency_factor
             )
-        return self.position_encoding 
-
-    def compute_mask(self, input_ids, mask=None):
-        """
-        Compute the mask for the input IDs.
-
-        Args:
-            input_ids (tf.Tensor): Input tensor containing token IDs.
-            mask (tf.Tensor): Optional mask tensor.
-
-        Returns:
-            tf.Tensor: Computed mask tensor.
-        """
-        if not self.mask_zero:
-            return None
-        return tf.not_equal(input_ids, 0)
+        return self.position_encoding
 
     def get_config(self):
         """
@@ -445,8 +430,7 @@ class Config:
         self.sequence_length = 4
         self.hidden_size = 4
         self.frequency_factor = 10000
-        self.mask_zero = True
-
+        
 config = Config()
 
 # Create an instance of the SinusoidalPositionalEncoding layer
@@ -462,18 +446,16 @@ output_embeddings = positional_encoding_layer(input_ids)
 
 # Print the output positional embeddings
 print("Outputs:")
-print(output_embeddings)
 print(input_ids)
-print(output_embeddings._keras_mask)
+print(output_embeddings)
 """
 Outputs:
+tf.Tensor([[2 0 0 0]], shape=(1, 4), dtype=int32)
 tf.Tensor(
 [[ 0.          0.          1.          1.        ]
  [ 0.84147096 -0.50636566  0.5403023   0.8623189 ]
  [ 0.9092974  -0.87329733 -0.4161468   0.48718765]
  [ 0.14112    -0.99975586 -0.9899925  -0.02209662]], shape=(4, 4), dtype=float32)
-tf.Tensor([[2 1 0 3]], shape=(1, 4), dtype=int32)
-tf.Tensor([[ True  True False  True]], shape=(1, 4), dtype=bool)
 """
 ```
 
@@ -500,10 +482,8 @@ class PositionalEmbeddings(tf.keras.layers.Layer):
 
     def __init__(self, config, **kwargs):
         super(PositionalEmbeddings, self).__init__(**kwargs)
-        self.supports_masking = True
         self.positional_embeddings = tf.keras.layers.Embedding(
-            input_dim=config.max_position_embeddings, output_dim=config.hidden_size,
-            mask_zero=True
+            input_dim=config.max_position_embeddings, output_dim=config.hidden_size
         )
 
     def call(self, input_ids):
@@ -533,16 +513,163 @@ class PositionalEmbeddings(tf.keras.layers.Layer):
             "positional_embeddings": self.positional_embeddings,
         })
         return config
+```
 
+**Testing:**
+
+```
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.mask_zero = True
+        
+
+config = Config()
+
+# Create an instance of the SinusoidalPositionalEncoding layer
+positional_encoding_layer = PositionalEmbeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply positional encodings
+output_embeddings = positional_encoding_layer(input_ids)
+
+# Print the output positional embeddings
+print("Outputs:")
+print(output_embeddings)
+
+"""
+Outputs:
+tf.Tensor(
+[[[-0.02825731 -0.00217507  0.01578121 -0.01750519]
+  [ 0.00112041 -0.03614271  0.03306187 -0.02413228]
+  [ 0.00990455 -0.00736488  0.03470118 -0.02544773]
+  [ 0.02571186 -0.02450178 -0.02327818  0.04356712]]], shape=(1, 4, 4), dtype=float32)
+"""
 ```
 
 By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
 
 ### Embedding layer
 
-```
+Now we are going to build the Embeddings layer. This layer will take `inputs_ids` and associate them with primitive representations and add positional information to them.
 
 ```
+import tensorflow as tf
+
+class Embeddings(tf.keras.layers.Layer):
+    """
+    Embeddings layer.
+
+    This layer combines token embeddings with positional embeddings to create the final embeddings.
+
+    Args:
+        config (object): Configuration object containing parameters.
+
+    Attributes:
+        token_embeddings (tf.keras.layers.Embedding): Token embedding layer.
+        PositionalInfo (tf.keras.layers.Layer): Positional information layer.
+        dropout (tf.keras.layers.Dropout): Dropout layer for regularization.
+        norm (tf.keras.layers.LayerNormalization): Layer normalization for normalization.
+    """
+
+    def __init__(self, config, **kwargs):
+        super(Embeddings, self).__init__(**kwargs)
+        self.token_embeddings = tf.keras.layers.Embedding(
+            input_dim=config.vocab_size, output_dim=config.hidden_size
+        )
+        if config.positional_information_type == 'embs':
+            self.PositionalInfo = PositionalEmbeddings(config)
+        elif config.positional_information_type == 'sinu':
+            self.PositionalInfo = SinusoidalPositionalEncoding(config)
+
+        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
+        self.norm = tf.keras.layers.LayerNormalization()
+
+    def call(self, input_ids, training=False):
+        """
+        Generate embeddings for input IDs.
+
+        Args:
+            input_ids (tf.Tensor): Input tensor containing token IDs.
+            training (bool, optional): Whether the model is in training mode. Defaults to False.
+
+        Returns:
+            tf.Tensor: Embeddings tensor of shape (batch_size, seq_length, hidden_size).
+        """
+        positional_info = self.PositionalInfo(input_ids)
+        x = self.token_embeddings(input_ids)
+        x += positional_info
+        x = self.norm(x)
+        x = self.dropout(x, training=training)
+        return x
+
+    def get_config(self):
+        """
+        Get the layer configuration.
+
+        Returns:
+            dict: Dictionary containing the layer configuration.
+        """
+        config = super().get_config()
+        config.update({
+            "token_embeddings": self.token_embeddings,
+            "PositionalInfo": self.PositionalInfo,
+            "dropout": self.dropout,
+            "norm": self.norm,
+        })
+        return config
+```
+
+**Testing:**
+
+```
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        
+
+config = Config()
+
+# Create an instance of the SinusoidalPositionalEncoding layer
+Embeddings_layer = Embeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply positional encodings
+output_embeddings = Embeddings_layer(input_ids)
+
+# Print the output positional embeddings
+print("Outputs:")
+print(output_embeddings)
+"""
+Outputs:
+tf.Tensor(
+[[[ 1.1676207  -0.2399907  -0.48948863 -0.43814147]
+  [-0.11419237  0.06112379  0.4712959  -0.41822734]
+  [ 0.6345568  -0.9779921   0.04900781  0.2944275 ]
+  [ 1.2179315  -0.09482005 -0.9809958  -0.14211564]]], shape=(1, 4, 4), dtype=float32)
+"""
+```
+
+Now we are done building the embedding layer!
 
 ### Encoder
     The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
