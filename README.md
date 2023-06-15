@@ -321,7 +321,7 @@ Now, we have our data ready to be fed into a model.
 
 ### Positional information
 
-    Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
+Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
 
 1. **Learned Positional Embeddings:** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
 
@@ -561,25 +561,6 @@ One common implementation of self-attention, known as **scaled dot-product atten
 2. Attention scores are computed by measuring the similarity between the query and key vectors using the dot product. This is efficiently achieved through matrix multiplication of the embeddings. Higher dot product values indicate stronger relationships between the query and key vectors, while low values indicate less similarity. The resulting attention scores form an n × n matrix, where n represents the number of input tokens.
 3. To ensure stability during training, the attention scores are scaled by a factor to normalize their variance. Then, a softmax function is applied to normalize the column values, ensuring they sum up to 1. This produces the attention weights, which also form an n × n matrix.
 4. The token embeddings are updated by multiplying them with their corresponding attention weights and summing the results. This process generates an updated representation for each embedding, taking into account the importance assigned to each token by the attention mechanism.
-
-First of all let's prepare an input on which to test all the building blocks of the model:
-
-```
-import tensorflow as tf
-from transformers import AutoTokenizer, AutoModel
-from transformers import TFAutoModel
-
-model_ckpt = "bert-base-uncased"
-tokenizer = AutoTokenizer.from_pretrained(model_ckpt, from_pt=True)
-model = TFAutoModel.from_pretrained(model_ckpt, from_pt=True)
-token_emb_layer = tf.keras.layers.Embedding(model.config.vocab_size,model.config.hidden_size)
-
-text = "time flies like an arrow"
-inputs = tokenizer(text, add_special_tokens=False, return_tensors="tf")
-inputs_embeds = token_emb_layer(inputs.input_ids)
-tf.shape(inputs_embeds)
-# <tf.Tensor: shape=(3,), dtype=int32, numpy=array([  1,   5, 768], dtype=int32)>
-```
 
 ```
 import tensorflow as tf
