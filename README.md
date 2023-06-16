@@ -611,6 +611,19 @@ class Embeddings(tf.keras.layers.Layer):
         x = self.dropout(x, training=training)
         return x
 
+    def compute_mask(self, inputs, mask=None):
+        """
+        Computes the mask for the inputs.
+
+        Args:
+            inputs (tf.Tensor): Input tensor.
+            mask (tf.Tensor, optional): Mask tensor. Defaults to None.
+
+        Returns:
+            tf.Tensor: Computed mask tensor.
+        """
+        return tf.math.not_equal(inputs, 0)
+
     def get_config(self):
         """
         Get the layer configuration.
@@ -626,6 +639,7 @@ class Embeddings(tf.keras.layers.Layer):
             "norm": self.norm,
         })
         return config
+
 ```
 
 **Testing:**
@@ -672,9 +686,9 @@ tf.Tensor(
 Now we are done building the embedding layer!
 
 ### Encoder
-    The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
+The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
-    Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
+Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
 
 #### Self-Attention
 
@@ -692,7 +706,7 @@ One common implementation of self-attention, known as **scaled dot-product atten
 ```
 import tensorflow as tf
 
-def scaled_dot_product_attention(query, key, value, mask=None):
+def encoder_scaled_dot_product_attention(query, key, value, padding_mask=None):
     """
     Calculates scaled dot-product attention.
 
@@ -707,11 +721,10 @@ def scaled_dot_product_attention(query, key, value, mask=None):
     """
     att_scores = tf.matmul(query, tf.transpose(key, perm=[0, 2, 1])) / tf.math.sqrt(tf.cast(tf.shape(query)[-1], tf.float32))
 
-    if mask is not None:
-        mask = tf.expand_dims(mask, axis=1)
-        att_scores = tf.where(mask == 0, -1e9, att_scores)
-        print(att_scores)
-
+    if padding_mask is not None:
+        padding_mask = tf.expand_dims(padding_mask, axis=1)
+        att_scores = tf.where(padding_mask == 0, -1e9, att_scores)
+        
     att_weights = tf.nn.softmax(att_scores, axis=-1)
     n_value = tf.matmul(att_weights, value)
 
@@ -721,28 +734,48 @@ def scaled_dot_product_attention(query, key, value, mask=None):
 Testing:
 
 ```
-scaled_dot_product_attention(inputs_embeds, inputs_embeds, inputs_embeds)
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
 
+
+config = Config()
+
+Embeddings_layer = Embeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply Embeddings_layer
+output_embeddings = Embeddings_layer(input_ids)
+
+# Calculating the scaled_dot_product_attention
+x = encoder_scaled_dot_product_attention(output_embeddings, output_embeddings, output_embeddings)
+print("Outputs:")
+print(x)
 """
-<tf.Tensor: shape=(1, 5, 768), dtype=float32, numpy=
-array([[[ 0.01556429,  0.00374883,  0.02096719, ..., -0.00231908,
-         -0.00910157, -0.01922644],
-        [ 0.0155272 ,  0.00371306,  0.0210163 , ..., -0.00231569,
-         -0.00911147, -0.01903477],
-        [ 0.0154297 ,  0.00385697,  0.02080077, ..., -0.00254198,
-         -0.00929157, -0.0190092 ],
-        [ 0.01515524,  0.00379813,  0.02099808, ..., -0.00259563,
-         -0.00930912, -0.01920566],
-        [ 0.01548781,  0.00350432,  0.02083553, ..., -0.00240597,
-         -0.00937845, -0.01906679]]], dtype=float32)>
+Outputs:
+<tf.Tensor: shape=(1, 4, 4), dtype=float32, numpy=
+array([[[-0.24380513,  0.30891424,  0.77327037, -0.83837944],
+        [-0.14214453, -0.15359674,  0.7142329 , -0.41849166],
+        [-0.3423917 ,  0.06370316,  0.7707834 , -0.49209484],
+        [-0.127046  , -0.21057218,  0.18979627,  0.14782192]]],
+      dtype=float32)>
 """
 ```
 
 #### Multi-headed attention
 
-    In our simple example, we only utilized the embeddings in their original form to calculate attention scores and weights, but that’s far from the whole story. In practical applications, the self-attention layer employs three separate linear transformations on each embedding to generate query, key, and value vectors. These transformations project the embeddings and introduce their own unique learnable parameters. This enables the self-attention layer to concentrate on various semantic aspects of the sequence.
-
-Furthermore, there is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
+In our simple example, we only utilized the embeddings in their original form to calculate attention scores and weights, but that’s far from the whole story. In practical applications, the self-attention layer employs three separate linear transformations on each embedding to generate query, key, and value vectors. These transformations project the embeddings and introduce their own unique learnable parameters. This enables the self-attention layer to concentrate on various semantic aspects of the sequence. Furthermore, there is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities.
 
@@ -877,15 +910,53 @@ Notice that the concatenated output from the attention heads is also fed through
 **Testing:**
 
 ```
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 2
+
+
+config = Config()
+
+Embeddings_layer = Embeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply Embeddings_layer
+output_embeddings = Embeddings_layer(input_ids)
+
+# Calculating the scaled_dot_product_attention
+x = encoder_scaled_dot_product_attention(output_embeddings, output_embeddings, output_embeddings)
+
+# Apply MultiHeadAttention
 multihead_attn = MultiHeadAttention(config)
-attn_output = multihead_attn(inputs_embeds)
-attn_output.shape
-# TensorShape([1, 5, 768])
+x = multihead_attn(x)
+
+print("Outputs:")
+print(x)
+"""
+Outputs:
+tf.Tensor(
+[[[-0.13276671 -0.22423127  0.3110505  -0.5942824 ]
+  [-0.15101442 -0.23653245  0.33511108 -0.5911138 ]
+  [-0.15196809 -0.23723732  0.3363799  -0.5909519 ]
+  [-0.13805726 -0.22647405  0.31781003 -0.59367764]]], shape=(1, 4, 4), dtype=float32)
+"""
 ```
 
 #### The Feed-Forward Layer and Normalization
 
-    The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**.
+The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**.
 
 In the literature, a general guideline suggests setting the hidden size of the first layer to be four times the size of the embeddings. Additionally, a GELU activation function is commonly used in this layer. It is believed that this particular sublayer contributes significantly to the model's capacity and memorization abilities. Consequently, when scaling up the models, this layer is often a focal point for adjustment and expansion.
 
@@ -1018,7 +1089,227 @@ class Encoder(tf.keras.layers.Layer):
         return config
 ```
 
+**Testing:**
+
+```
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 2
+        self.intermediate_fc_size = self.hidden_size * 4.
+
+
+config = Config()
+
+Embeddings_layer = Embeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+
+# Apply Embeddings_layer
+output_embeddings = Embeddings_layer(input_ids)
+
+# Calculating the scaled_dot_product_attention
+x = scaled_dot_product_attention(output_embeddings, output_embeddings, output_embeddings)
+
+# Apply Encoder
+encoder = Encoder(config)
+x = encoder(x)
+
+print("Outputs:")
+print(x)
+"""
+Outputs:
+tf.Tensor(
+[[[ 0.682768   -0.63703626 -1.2726235   1.2268918 ]
+  [ 0.37685263 -0.81918937 -1.0208921   1.4632291 ]
+  [ 0.9922866  -0.768089   -1.2070206   0.98282284]
+  [ 1.197997    0.3532541   0.00855568 -1.5598068 ]]], shape=(1, 4, 4), dtype=float32)
+"""
+```
+
 We’ve now implemented our very first transformer encoder layer from scratch!
+
+
+### Decoder
+The main difference between the decoder and encoder is that the decoder has two attention sublayers:
+
+1. **Masked multi-head self-attention layer.** Ensures that the tokens we generate at each timestep are only based on the past outputs and the current token being predicted. Without this, the decoder could cheat during training by simply copying the target translations; masking the inputs ensures the task is not trivial.
+2. **Encoder-decoder attention layer.** Performs multi-head attention over the output key and value vectors of the encoder stack, with the intermediate representations of the decoder acting as the queries. This way the encoder-decoder attention layer learns how to relate tokens from two different sequences, such as two different languages. The decoder has access to the encoder keys and values in each block.
+
+Let’s take a look at the modifications we need to make to include masking in our self-attention layer. The trick with masked self-attention is to introduce a mask matrix with ones on the lower diagonal and zeros above:
+```
+import tensorflow as tf
+
+seq_len = 4
+mask = tf.linalg.band_part(tf.ones((seq_len, seq_len)), -1, 0)
+mask = tf.expand_dims(mask, axis=0)
+mask
+"""
+<tf.Tensor: shape=(1, 4, 4), dtype=float32, numpy=
+array([[[1., 0., 0., 0.],
+        [1., 1., 0., 0.],
+        [1., 1., 1., 0.],
+        [1., 1., 1., 1.]]], dtype=float32)>
+"""
+```
+
+Here we've used TensorFlow's `tf.linalg.band_part()` function to create the lower triangular matrix. Once we have this mask matrix, we can prevent each attention head from peeking at future tokens by using `tf.where()` to replace all the zeros with negative infinity:
+```
+import tensorflow as tf
+
+# Create example query, key, and value tensors
+scores = tf.random.normal(shape=(1, 4, 4))
+
+# Apply the mask to scores tensor
+scores = tf.where(tf.equal(mask, 0), tf.constant(-float("inf"), dtype=tf.float32), scores)
+
+# Print the scores tensor
+print(scores)
+"""
+tf.Tensor(
+[[[ 0.78525937        -inf        -inf        -inf]
+  [-0.43159866 -0.37508744        -inf        -inf]
+  [ 0.7587768  -0.1002408  -1.6593473         -inf]
+  [ 0.25996745 -1.0069757   1.1573174  -1.1290911 ]]], shape=(1, 4, 4), dtype=float32)
+"""
+```
+
+By setting the upper values to negative infinity, we guarantee that the attention weights are all zero once we take the softmax over the scores because e^(-∞) = 0 (recall that softmax calculates the normalized exponential). We can easily include this masking behavior with a small change to our scaled dot-product attention function that we implemented earlier:
+
+```
+import tensorflow as tf
+
+def decoder_scaled_dot_product_attention(query, key, value, padding_mask=None, casual_mask=None):
+    """
+    Scaled Dot-Product Attention mechanism for decoder.
+
+    Args:
+        query (tf.Tensor): Query tensor of shape (batch_size, query_length, d_model).
+        key (tf.Tensor): Key tensor of shape (batch_size, key_length, d_model).
+        value (tf.Tensor): Value tensor of shape (batch_size, value_length, d_model).
+        padding_mask (tf.Tensor, optional): Padding mask tensor of shape (batch_size, 1, key_length)
+            to mask padding elements in the key. Defaults to None.
+        casual_mask (tf.Tensor, optional): Causal mask tensor of shape (1, query_length, key_length)
+            to mask future positions in the key. Defaults to None.
+
+    Returns:
+        tf.Tensor: Weighted sum of value tensor based on attention scores.
+    """
+    dim_k = tf.shape(query)[-1]
+    att_scores = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.cast(dim_k, tf.float32))
+
+    if padding_mask is not None:
+        padding_mask = tf.expand_dims(padding_mask, axis=1)
+        att_scores = tf.where(padding_mask == 0, -float("inf"), att_scores)
+
+    if casual_mask is not None:
+        att_scores = tf.where(casual_mask == 0, -float("inf"), att_scores)
+
+    weights = tf.nn.softmax(att_scores, axis=-1)
+    return tf.matmul(weights, value)
+
+```
+
+**Testing:**
+
+```
+def decoder_scaled_dot_product_attention(query, key, value, padding_mask=None, casual_mask = None):
+    dim_k = tf.shape(query)[-1]
+    att_scores = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.cast(dim_k, tf.float32))
+    if padding_mask is not None:
+        padding_mask = tf.expand_dims(padding_mask, axis=1)
+        att_scores = tf.where(padding_mask == 0, -float("inf"), att_scores)
+        print(f'padding_mask:\n {padding_mask}')
+        print(f'att_scores after padding_mask:\n {att_scores}')
+
+    if casual_mask is not None:
+        att_scores = tf.where(tf.equal(casual_mask, 0), tf.constant(-float("inf"), dtype=tf.float32), att_scores)
+        print(f'casual_mask:\n {casual_mask}')
+        print(f'att_scores after casual_mask:\n {att_scores}')
+    weights = tf.nn.softmax(att_scores, axis=-1)
+    print(f'weights:\n {weights}')
+    return tf.matmul(weights, value)
+
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 2
+        self.intermediate_fc_size = self.hidden_size * 4.
+
+
+config = Config()
+
+Embeddings_layer = Embeddings(config)
+
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.constant([[[1, 2, 3, 0]]])
+
+# Apply Embeddings_layer
+output_embeddings = Embeddings_layer(input_ids)
+
+# Create padding mask and casual mask
+padding_mask = tf.cast(output_embeddings._keras_mask, tf.int32)  # Padding mask with value 0 for padding positions
+
+casual_mask = tf.expand_dims(tf.linalg.band_part(tf.ones((seq_len, seq_len)), -1, 0), axis = 0)
+
+
+# Calculating the scaled_dot_product_attention
+x = decoder_scaled_dot_product_attention(output_embeddings, output_embeddings, output_embeddings,
+                                         padding_mask = padding_mask, casual_mask = casual_mask)
+print(f'Outputs:\n {x}')
+
+"""
+padding_mask:
+ [[[[1 1 1 0]]]]
+att_scores after padding_mask:
+ [[[[ 1.0152416   0.58008635  0.5592638         -inf]
+   [ 0.58008635  0.91986394  0.18034777        -inf]
+   [ 0.5592638   0.18034777  0.84522855        -inf]
+   [ 0.58929074  0.8555151  -0.20688778        -inf]]]]
+casual_mask:
+ [[[1. 0. 0. 0.]
+  [1. 1. 0. 0.]
+  [1. 1. 1. 0.]
+  [1. 1. 1. 1.]]]
+att_scores after casual_mask:
+ [[[[ 1.0152416         -inf        -inf        -inf]
+   [ 0.58008635  0.91986394        -inf        -inf]
+   [ 0.5592638   0.18034777  0.84522855        -inf]
+   [ 0.58929074  0.8555151  -0.20688778        -inf]]]]
+weights:
+ [[[[1.         0.         0.         0.        ]
+   [0.4158635  0.5841365  0.         0.        ]
+   [0.33160362 0.22701685 0.4413795  0.        ]
+   [0.36283454 0.47350916 0.16365626 0.        ]]]]
+Outputs:
+ [[[[ 0.6464348   0.768902   -0.60815483 -0.8071821 ]
+   [ 0.30711102  0.6822517   0.001986   -0.99134886]
+   [ 0.72063196  0.27291566 -0.23751152 -0.7560362 ]
+   [ 0.4477819   0.5272448  -0.06405909 -0.9109677 ]]]]
+"""
+```
+
+
+
 
 
 
