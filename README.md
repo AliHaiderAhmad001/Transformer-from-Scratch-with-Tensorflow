@@ -1245,7 +1245,13 @@ learning_rate = d_model^(-0.5) * min(step_num^(-0.5), step_num * warmup_steps^(-
 
 Here, `d_model` represents the dimensionality of the model, `step_num` indicates the current training step, and `warmup_steps` denotes the number of warmup steps. Typically, `warmup_steps` is set to a few thousand or a fraction of the total training steps.
 
-By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations. Let's implement the scheduler:
+The motivation behind learning rate warmup is to address two challenges that often occur at the beginning of training:
+
+1. Large Gradient Magnitudes: In the initial stages of training, the model parameters are randomly initialized, and the gradients can be large. If a high learning rate is applied immediately, it can cause unstable updates and prevent the model from converging. Warmup allows the model to stabilize by starting with a lower learning rate and gradually increasing it.
+
+2. Exploration of the Solution Space: The model needs to explore a wide range of solutions to find an optimal or near-optimal solution. A high learning rate at the beginning may cause the model to converge prematurely to suboptimal solutions. Warmup enables the model to explore the solution space more effectively by starting with a low learning rate and then increasing it to search for better solutions.
+
+Let's implement the scheduler:
 
 ```
 import tensorflow as tf
@@ -1298,6 +1304,8 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         }
         return config
 ```
+
+By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
 
 Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values. To accomplish this, we can refer to the implementation provided in TensorFlow's tutorial on Neural machine translation with a Transformer and Keras and adapt it for our model.
 
