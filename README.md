@@ -1229,7 +1229,126 @@ tf.Tensor(
 Now we have finished building the main components of the model!
 
 
+## End-to-end Transformer
+
+We will train the end-to-end Transformer model, which is responsible for mapping the source sequence and the target sequence to predict the target sequence one step ahead. This model seamlessly integrates the components we have developed: the Embedding layer, the Encoder, and the Decoder. Both the Encoder and the Decoder can be stacked to create more powerful versions as they maintain the same shape.
+
+### Prepare the Transformer Model for Training
+
+Before training the Transformer, we need to determine the training strategy. In accordance with the paper "Attention Is All You Need," we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
+
+During the warmup phase, the learning rate is increased in a linear manner or according to a specific schedule until it reaches a predefined value. The objective of this warmup phase is to enable the model to explore a wider range of solutions during the initial training phase when the gradients might be large and unstable. The specific formula for the learning rate warmup is as follows:
+
+```
+learning_rate = d_model^(-0.5) * min(step_num^(-0.5), step_num * warmup_steps^(-1.5))
+```
+
+Here, `d_model` represents the dimensionality of the model, `step_num` indicates the current training step, and `warmup_steps` denotes the number of warmup steps. Typically, `warmup_steps` is set to a few thousand or a fraction of the total training steps.
+
+By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations. Let's implement the scheduler:
+
+```
+import tensorflow as tf
+
+class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """
+    Custom learning rate schedule for the Adam optimizer.
+
+    Args:
+        key_dim (int): Dimensionality of the key.
+        warmup_steps (int): Number of warmup steps for learning rate warmup.
+
+    Attributes:
+        key_dim (int): Dimensionality of the key.
+        warmup_steps (int): Number of warmup steps for learning rate warmup.
+        d (tf.float32): Key dimensionality casted to float32.
+    """
+
+    def __init__(self, key_dim, warmup_steps=4000):
+        super().__init__()
+        self.key_dim = key_dim
+        self.warmup_steps = warmup_steps
+        self.d = tf.cast(self.key_dim, tf.float32)
+
+    def __call__(self, step):
+        """
+        Compute the learning rate for a given step.
+
+        Args:
+            step (tf.Tensor): Current training step.
+
+        Returns:
+            Learning rate (tf.Tensor) for the given step.
+        """
+        step = tf.cast(step, dtype=tf.float32)
+        arg1 = tf.math.rsqrt(step)
+        arg2 = step * (self.warmup_steps ** -1.5)
+        return tf.math.rsqrt(self.d) * tf.math.minimum(arg1, arg2)
+
+    def get_config(self):
+        """
+        Get the configuration of the custom learning rate schedule.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = {
+            "key_dim": self.key_dim,
+            "warmup_steps": self.warmup_steps,
+        }
+        return config
+```
+
+Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values. To accomplish this, we can refer to the implementation provided in TensorFlow's tutorial on Neural machine translation with a Transformer and Keras and adapt it for our model.
+
+```
+import tensorflow as tf
+
+def masked_loss(label, pred):
+    """
+    Computes the masked loss between the predicted and target labels.
+
+    Args:
+        label: Target label tensor.
+        pred: Predicted label tensor.
+
+    Returns:
+        Masked loss value.
+    """
+    mask = label != 0
+
+    loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+    loss = loss_object(label, pred)
+
+    mask = tf.cast(mask, dtype=loss.dtype)
+    loss *= mask
+    loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
+    return loss
 
 
+def masked_accuracy(label, pred):
+    """
+    Computes the masked accuracy between the predicted and target labels.
 
+    Args:
+        label: Target label tensor.
+        pred: Predicted label tensor.
 
+    Returns:
+        Masked accuracy value.
+    """
+    pred = tf.argmax(pred, axis=2)
+    label = tf.cast(label, pred.dtype)
+    match = label == pred
+
+    mask = label != 0
+
+    match = match & mask
+
+    match = tf.cast(match, dtype=tf.float32)
+    mask = tf.cast(mask, dtype=tf.float32)
+    return tf.reduce_sum(match) / tf.reduce_sum(mask)
+```
+
+### Training the Transformer
