@@ -1256,58 +1256,86 @@ Let's implement the scheduler:
 ```
 import tensorflow as tf
 
-class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     """
-    Custom learning rate schedule for the Adam optimizer.
+    Custom learning rate schedule with warmup for training.
 
     Args:
-        key_dim (int): Dimensionality of the key.
-        warmup_steps (int): Number of warmup steps for learning rate warmup.
+        config: Configuration object containing hyperparameters.
 
     Attributes:
-        key_dim (int): Dimensionality of the key.
-        warmup_steps (int): Number of warmup steps for learning rate warmup.
-        d (tf.float32): Key dimensionality casted to float32.
+        warmup_steps: Number of warmup steps for learning rate warmup.
+        d: Hidden size of the model.
     """
 
-    def __init__(self, key_dim, warmup_steps=4000):
+    def __init__(self, config):
         super().__init__()
-        self.key_dim = key_dim
-        self.warmup_steps = warmup_steps
-        self.d = tf.cast(self.key_dim, tf.float32)
+        self.warmup_steps = config.warmup_steps
+        self.d = tf.cast(config.hidden_size, tf.float32)
 
     def __call__(self, step):
         """
-        Compute the learning rate for a given step.
+        Calculates the learning rate based on the current step.
 
         Args:
-            step (tf.Tensor): Current training step.
+            step: Current optimization step.
 
         Returns:
-            Learning rate (tf.Tensor) for the given step.
+            The learning rate value.
+
         """
         step = tf.cast(step, dtype=tf.float32)
         arg1 = tf.math.rsqrt(step)
         arg2 = step * (self.warmup_steps ** -1.5)
-        return tf.math.rsqrt(self.d) * tf.math.minimum(arg1, arg2)
+        lr =  tf.math.rsqrt(self.d) * tf.math.minimum(arg1, arg2)
+        return lr
 
     def get_config(self):
         """
-        Get the configuration of the custom learning rate schedule.
+        Returns the configuration of the custom learning rate schedule.
 
         Returns:
             Configuration dictionary.
+
         """
         config = {
-            "key_dim": self.key_dim,
             "warmup_steps": self.warmup_steps,
         }
         return config
 ```
 
+This corresponds to increasing the learning rate linearly for the first `warmup_steps` training steps, and decreasing it thereafter proportionally to the inverse square root of the step number. You can see how the learning rate values change with each time step with the following code:
+```
+import matplotlib.pyplot as plt
+
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.vocab_size = 10
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 2
+        self.intermediate_fc_size = self.hidden_size * 4
+        self.warmup_steps = 4000
+
+
+config = Config()
+
+lr = LrSchedule(config)
+optimizer = tf.keras.optimizers.Adam(lr)
+
+plt.plot(lr(tf.range(40000, dtype=tf.float32)))
+plt.ylabel('Learning Rate')
+plt.xlabel('Train Step')
+plt.show()
+```
+
 By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
 
-Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values. To accomplish this, we can refer to the implementation provided in TensorFlow's tutorial on Neural machine translation with a Transformer and Keras and adapt it for our model.
+Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values:
 
 ```
 import tensorflow as tf
@@ -1325,9 +1353,9 @@ def masked_loss(label, pred):
     """
     mask = label != 0
 
-    loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+    scc_loss = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none')
-    loss = loss_object(label, pred)
+    loss = scc_loss(label, pred)
 
     mask = tf.cast(mask, dtype=loss.dtype)
     loss *= mask
@@ -1358,5 +1386,9 @@ def masked_accuracy(label, pred):
     mask = tf.cast(mask, dtype=tf.float32)
     return tf.reduce_sum(match) / tf.reduce_sum(mask)
 ```
+
+However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like BLEU, METEOR, ROUGE, or CIDEr, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence.
+
+Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
 
 ### Training the Transformer
