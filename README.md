@@ -6,43 +6,43 @@ The task of translating text from one language into another is a common task. In
 
 ## Transformer architecture
 
-The Transformer architecture is a popular model architecture used for various natural language processing tasks, including machine translation, text generation, and language understanding. It was introduced by Vaswani et al. in the paper "Attention Is All You Need". The Transformer architecture consists of two main components: the encoder and the decoder. Both the encoder and decoder are composed of multiple layers of self-attention and feed-forward neural networks. The key idea behind the Transformer is the use of self-attention mechanisms, which allow the model to focus on different parts of the input sequence when generating the output:
+The Transformer architecture is a popular model architecture used for various natural language processing tasks, including machine translation, text generation, and language understanding. It was introduced by Vaswani et al. in the paper "Attention Is All You Need". The Transformer architecture consists of two main components: the encoder and the decoder. Both the encoder and decoder are composed of multiple layers of self-attention and feed-forward neural networks. The key idea behind the Transformer is the use of self-attention mechanisms, which allow the model to focus on different parts of the input sequence when generating the output. In the following figure a high-level overview of the Transformer architecture.
 
-المحولات هي بنية نموذجية شائعة تستخدم في العديد من مهام معالجة اللغة الطبيعية، بما في ذلك الترجمة الآلية وتوليد النص وفهم اللغة. تم تقديمه بواسطة Vaswani et al. في مقالة "الاهتمام هو كل ما تحتاجه". تتكون بنية المحول من مكونين رئيسيين: المشفر ووحدة فك التشفير. يتكون كل من المشفر ومفكك التشفير من طبقات متعددة من الاهتمام الذاتي والشبكات العصبية ذات التغذية الأمامية. الفكرة الرئيسية وراء المحول هي استخدام آليات الانتباه الذاتي، والتي تسمح للنموذج بالتركيز على أجزاء مختلفة من سلسلة الدخل عند إنشاء سلسلة الخرج:
+المحولات هي بنية نموذجية شائعة تستخدم في العديد من مهام معالجة اللغة الطبيعية، بما في ذلك الترجمة الآلية وتوليد النص وفهم اللغة. تم تقديمه بواسطة Vaswani et al. في مقالة "الاهتمام هو كل ما تحتاجه". تتكون بنية المحول من مكونين رئيسيين: المشفر ووحدة فك التشفير. يتكون كل من المشفر ومفكك التشفير من طبقات متعددة من الاهتمام الذاتي والشبكات العصبية ذات التغذية الأمامية. الفكرة الرئيسية وراء المحول هي استخدام آليات الانتباه الذاتي، والتي تسمح للنموذج بالتركيز على أجزاء مختلفة من سلسلة الدخل عند إنشاء سلسلة الخرج. في الشكل التالي نظرة عامة عالية المستوى على بنية المحولات.
+<br>
+<br>
+<br>
+<br>
 
 ![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
 
 
-**Here is a high-level overview of the Transformer architecture:**
-**فيما يلي نظرة عامة عالية المستوى على بنية المحولات:**
 
-**1. Encoder:** The input sequence is first passed through an embedding layer, which maps each token to a continuous vector representation -followed by positional encoding to provide information about the position of tokens in the sequence. The embedded input is then processed by a stack of identical encoder layers. Each encoder layers consists of a multi-head self-attention mechanism, followed by a feed-forward neural network. The self-attention mechanism allows the *encoder* to attend to different positions in the input sequence and capture dependencies between tokens. The output of the encoder is a set of encoded representations for each token in the input sequence.
+* **Encoder.** The input sequence is first passed through an embedding layer, which maps each token to a continuous vector representation -followed by positional encoding to provide information about the position of tokens in the sequence. The embedded input is then processed by a stack of identical encoder layers. Each encoder layers consists of a multi-head self-attention mechanism, followed by a feed-forward neural network. The self-attention mechanism allows the *encoder* to attend to different positions in the input sequence and capture dependencies between tokens. The output of the encoder is a set of encoded representations for each token in the input sequence.
 
 تُمرّر سلسلة الدخل إلى طبقة تضمين تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك ترميّز موضعي يهدف إلى تقديم معلومات حول مواقع الوحدات النصية ضمن سلسلة الدخل. تجري معالجة هذه التضمينات بعد ذلك من خلال طبقات المشفّر المتماثلة. كل طبقة تشفير تتألف من طبقة انتباه ذاتي متعدد الرؤوس متبوعة بطبقة تغذية أمامية. تسمح آلية الانتباه الذاتي للمشفّر بمشاهدة المواقع المختلفة لسلسلة الدخل، والتقاط التبعيات بين الوحدات النصية. أي بمعنى آحر، تسمح له بمعرفة مدى ارتباط كل كلمة مع الكلمات الأخرى. خرج المشفّر هو تمثيّل جديد لكل وحدة نصيّة من سلسلة الدخل.
 
-
-**2. Decoder:**
-The decoder takes the encoded representations from the encoder as input, along with the target sentence. Similar to the encoder, the input to the decoder is first passed through an embedding layer, followed by positional encoding. The decoder also consists of a stack of identical decoder layers. Each decoder layer has two self-attention mechanisms: a masked multi-head self-attention mechanism to prevent the decoder from looking ahead, and a cross-attention mechanism that allows the decoder to attend to the encoder's output. The decoder generates the output sequence.
+* **Decoder.** The decoder takes the encoded representations from the encoder as input, along with the target sentence. Similar to the encoder, the input to the decoder is first passed through an embedding layer, followed by positional encoding. The decoder also consists of a stack of identical decoder layers. Each decoder layer has two self-attention mechanisms: a masked multi-head self-attention mechanism to prevent the decoder from looking ahead, and a cross-attention mechanism that allows the decoder to attend to the encoder's output. The decoder generates the output sequence.
 
 تأخذ وحدة فك التشفير التمثيلات من المشفّر كدخل، جنبًا إلى جنب مع الجملة الهدف. كما في وحدة المُشفّر؛ تُمرّر سلسلة الدخل إلى طبقة تضمين تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك ترميّز موضعي. تحتوي كل طبقة من طبقات وحدة فك التشفير على آليتين للانتباه الذاتي: آلية الانتباه الذاتي متعدد الرؤوس المُقنّعة لمنع وحدة فك التشفير من النظر إلى الأمام، وآلية الانتباه المتقاطع الذي يسمح لوحدة فك التشفير بالوصول إلى خرج المشفّر. تقوم وحدة فك التشفير بتوليد سلسلة الخرج (الجملة بعد الترجمة).
 
-**3. Positional Encoding:** Positional encoding is used to inject information about the position of tokens into the model. The positional encoding is added to the embedded input and provides the model with the positional information necessary for capturing sequential relationships.
+* **Positional Encoding.** Positional encoding is used to inject information about the position of tokens into the model. The positional encoding is added to the embedded input and provides the model with the positional information necessary for capturing sequential relationships.
 
 يُستخدم الترميز الموضعي لإضافة معلومات المواقع للوحدات النصية إلى النموذج (بدونها لايمكن للنموذح فهم ترتيب الكلمات في الجملة).
 
-**4. Final Linear Layer:** The output of the decoder is passed through a linear layer followed by a Softmax activation function to produce the probability distribution over the target vocabulary.
+* **Final Linear Layer.** The output of the decoder is passed through a linear layer followed by a Softmax activation function to produce the probability distribution over the target vocabulary.
 
 يتم تمرير خرج وحدة فك التشفير إلى طبقة خطية متبوعة بدالة تنشيط سوفتماكس لإنتاج التوزيع الاحتمالي على المفردات المستهدفة.
+<br>
+<br>
+<br>
 
+The following figure shows encoder-decoder architecture of the transformer, with the encoder shown in the upper half of the figure and the decoder in the lower half. It is worth saying that this figure represents the the "inference phase". Here it should be noted that the decoder’s mechanism in the inference phase is slightly different in the training phase, and we will understand that later.
 
-The following figure shows encoder-decoder architecture of the transformer, with the encoder shown in the upper half of the figure and the decoder in the lower half:
-
-يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي: 
-
-**Note:** This figure represents the the "inference phase". Here it should be noted that the decoder’s mechanism in the inference phase is slightly different in the training phase, and we will understand that later.
-
-** ملاحظة: ** هذا الشكل يمثل "مرحلة الاستدلال". هنا تجدر الإشارة إلى أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً في مرحلة التدريب، وسنفهم ذلك لاحقًا.
-
+يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي. تجدر الإشارة إلا أن هذا الشكل يمثل "مرحلة الاستدلال". هنا تجدر الإشارة إلى أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً في مرحلة التدريب، وسنفهم ذلك لاحقًا.
+<br>
+<br>
+<br>
 
 ![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
 
@@ -57,7 +57,7 @@ Here are the steps to build an English to French translation model using the Tra
 
 ## Data preparation
 
-1. **Dwonload Dataset.** We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
+We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
     ```
     import tensorflow as tf, pathlib
     text_file = tf.keras.utils.get_file(
@@ -69,9 +69,7 @@ Here are the steps to build an English to French translation model using the Tra
     text_file = pathlib.Path(text_file).parent / "fra.txt"
     ```
 
-The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French).
-
-2. **Data normalization.** Normalize dataset (French and English sentence) then prepend the token "[start]" and append the token "[end]" to the French sentence.
+The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French). Now, normalize dataset (French and English sentence) then prepend the token "[start]" and append the token "[end]" to the French sentence.
 
     ```
     import pathlib
