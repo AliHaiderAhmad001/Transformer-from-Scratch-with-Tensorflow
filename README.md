@@ -59,18 +59,23 @@ Here are the steps to build an English to French translation model using the Tra
 
 We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
     ```
-    import tensorflow as tf, pathlib
+    import pathlib
+    import tensorflow as tf
     text_file = tf.keras.utils.get_file(
         fname="fra-eng.zip",
         origin="http://storage.googleapis.com/download.tensorflow.org/data/fra-eng.zip",
         extract=True,
     )
-    # File location
-    text_file = pathlib.Path(text_file).parent / "fra.txt"
+    text_file = pathlib.Path(text_file).parent/"fra.txt"
+    print(text_file)
     ```
 
-The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French). Now, normalize dataset (French and English sentence) then prepend the token "[start]" and append the token "[end]" to the French sentence.
+    ```
+    Output:
+    /root/.keras/datasets/fra.txt
+    ```
 
+The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French). Now, normalize dataset (French and English sentence) then prepend the token "[start]" and append the token "[end]" to the French sentence:
     ```
     import pathlib
     import pickle
@@ -84,6 +89,7 @@ The dataset we're working on consists of 167,130 lines. Each line consists of th
         Args: The normalize function takes a line of text as input.
         Return: Normalized English and French sentences as a tuple (eng, fra).
         """
+        # converts characters to their standardized forms (e.g., converting full-width characters to half-width)
         line = unicodedata.normalize("NFKC", line.strip())
         
         # Perform regular expression substitutions to add spaces around non-alphanumeric characters
@@ -101,16 +107,11 @@ The dataset we're working on consists of 167,130 lines. Each line consists of th
         # Return the normalized English and French sentences
         return eng, fra
     
-    
     # normalize each line and separate into English and French
     with open(text_file) as fp:
         text_pairs = [normalize(line) for line in fp]
-    with open("text_pairs.pickle", "wb") as fp:
-        pickle.dump(text_pairs, fp)
-    ```
 
-Let's look at the data:
-    ```
+    # let's look at the data
     print(f"Each sample of data will look like this: {text_pairs[55805]}")
     print(f"Numper of sampels: {len(text_pairs)}")
     print(f"Max length in english sequences: {max([len(x[0].split()) for x in text_pairs])}")
@@ -127,27 +128,18 @@ Let's look at the data:
     Numper of token in english sequences: 14969
     Numper of token in french sequences: 29219
     ```
-
-Explanation of the code:
-* The `normalize` function takes a line of text as input.
-* It first applies Unicode normalization form NFKC to the line, which converts characters to their standardized forms
-   (e.g., converting full-width characters to half-width).
-* The regular expression substitutions using `re.sub` are performed to add spaces around non-alphanumeric characters in the line.
-   The patterns and replacement expressions are as follows.
-* The line is then split into two parts at the tab character using line.split("\t"), 
-   resulting in the English sentence (eng) and the French sentence (fra).
-* The [start] and [end] tokens are added to the fra part of the line to indicate the start and end of the sentence.
-
-3. **Vectorizing the text data.** We need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
-
+    
+Now, we need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
     ```
     random.shuffle(text_pairs)
+    max_len = max([max([len(x[0].split()), len(x[1].split())]) for x in text_pairs])
     num_val_samples = int(0.15 * len(text_pairs))
     num_train_samples = len(text_pairs) - 2 * num_val_samples
     train_pairs = text_pairs[:num_train_samples]
     val_pairs = text_pairs[num_train_samples : num_train_samples + num_val_samples]
     test_pairs = text_pairs[num_train_samples + num_val_samples :]
     
+    print(f"{max_len} maximum length")
     print(f"{len(text_pairs)} total pairs")
     print(f"{len(train_pairs)} training pairs")
     print(f"{len(val_pairs)} validation pairs")
@@ -155,20 +147,20 @@ Explanation of the code:
     ```
     ```
     Output:
+    60 maximum length
     167130 total pairs
     116992 training pairs
     25069 validation pairs
     25069 test pairs
     ```
-
+    
 Now we'll do Vectorization:
-
     ```
     from tensorflow.keras.layers import TextVectorization
     
     vocab_size_en = 14969
     vocab_size_fr = 29219
-    seq_length = 60
+    seq_length = 256
     
     # English layer
     eng_vectorizer = TextVectorization(
@@ -195,11 +187,40 @@ Now we'll do Vectorization:
     fra_vectorizer.adapt(train_fra_texts)
     ```
 
-4. **Making dataset.** Now we have to define how we will pass the data to the model. There are several ways to do this:
+Now we can save what we do for the subsequent steps:
+    ```
+    with open("vectorize.pickle", "wb") as fp:
+        data = {
+            "train": train_pairs,
+            "val":   val_pairs,
+            "test":  test_pairs,
+            "engvec_config":  eng_vectorizer.get_config(),
+            "engvec_weights": eng_vectorizer.get_weights(),
+            "fravec_config":  fra_vectorizer.get_config(),
+            "fravec_weights": fra_vectorizer.get_weights(),
+        }
+        pickle.dump(data, fp)
+    ```
+
+And we can open the files again using:
+    ```
+    with open("vectorize.pickle", "rb") as fp:
+        data = pickle.load(fp)
+    
+    train_pairs = data["train"]
+    val_pairs = data["val"]
+    test_pairs = data["test"]
+    eng_vectorizer = TextVectorization.from_config(data["engvec_config"])
+    eng_vectorizer.set_weights(data["engvec_weights"])
+    fra_vectorizer = TextVectorization.from_config(data["fravec_config"])
+    fra_vectorizer.set_weights(data["fravec_weights"])
+    ```
+    
+Now we have to define how we will pass the data to the model. There are several ways to do this:
 * Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
 * Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
 * Use the `tf.data` dataset(Our choice). The general benefits of using the `tf.data` dataset are flexibility in handling the data and making feeding the model data more efficient and fast. But what is `tf.data` (In brief)? `tf.data` is a module in TensorFlow that provides tools for building efficient and scalable input pipelines for machine learning models. It is designed to handle large datasets, facilitate data preprocessing, and enable high-performance data ingestion for training and evaluation. Using tf.data, you can build efficient and scalable input pipelines for training deep learning models. Here are some important functions:
-    * `shuffle(n)`: Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer. When data is pulled out of the buffer (such as when grabbing the next batch of data), TensorFlow automatically refills the buffer.
+    * `shuffle(n)`: Randomly fills a buffer of data with `n` data points and randomly shuffles the data in the buffer.
     * `batch(n)`: Generate batches of the dataset, each of size n.
     * `prefetch(n)`: to keep n batches/elements in memory ready for the training loop to consume.
     * `cache(): Efficiently caches the dataset for faster subsequent reads.
@@ -211,37 +232,50 @@ Now we'll do Vectorization:
     from tensorflow.data import AUTOTUNE
     
     def format_dataset(eng, fra):
+        """
+        Formats the dataset by applying vectorization and preparing the inputs for the encoder and decoder.
+    
+        Args:
+            eng: English text tensor.
+            fra: French text tensor.
+    
+        Returns:
+            Tuple of formatted inputs for the encoder and decoder.
+        """
         eng = eng_vectorizer(eng)
         fra = fra_vectorizer(fra)
-        return ({"encoder_inputs": eng, "decoder_inputs": fra[:, :-1],},
-                fra[:, 1:])
+        return (
+            {"encoder_inputs": eng, "decoder_inputs": fra[:, :-1]},
+            fra[:, 1:]
+        )
+    
+    
     def make_dataset(pairs, batch_size=64):
+        """
+        Creates a dataset from pairs of English and French texts.
+    
+        Args:
+            pairs: List of pairs containing English and French texts.
+            batch_size: Batch size for the dataset.
+    
+        Returns:
+            Formatted and preprocessed dataset.
+        """
         eng_texts, fra_texts = zip(*pairs)
         eng_texts = list(eng_texts)
         fra_texts = list(fra_texts)
         
-        # Convert the lists to TensorFlow tensors
-        eng_texts = tf.convert_to_tensor(eng_texts)
-        fra_texts = tf.convert_to_tensor(fra_texts)
-        
-        # Create a TensorFlow dataset from tensors
         dataset = tf.data.Dataset.from_tensor_slices((eng_texts, fra_texts))
-        
-        # Apply dataset transformations
-        dataset = dataset.shuffle(len(pairs))  # Shuffle the entire dataset
         dataset = dataset.batch(batch_size)
-        dataset = dataset.map(format_dataset, num_parallel_calls=AUTOTUNE)
-        dataset = dataset.prefetch(AUTOTUNE).cache()
-        
+        dataset = dataset.map(format_dataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.shuffle(2048).prefetch(tf.data.experimental.AUTOTUNE).cache()
+    
         return dataset
     
     train_ds = make_dataset(train_pairs)
     val_ds = make_dataset(val_pairs)
-    ```
-
-Let's take a look:
-
-    ```
+    
+    # let's take a look:
     for inputs, targets in train_ds.take(1):
         print(f'inputs["encoder_inputs"].shape: {inputs["encoder_inputs"].shape}')
         print(f'inputs["encoder_inputs"][0]: {inputs["encoder_inputs"][0]}')
