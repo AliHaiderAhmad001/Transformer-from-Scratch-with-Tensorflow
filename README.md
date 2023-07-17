@@ -13,10 +13,7 @@ The Transformer architecture is a popular model architecture used for various na
 المحولات هي بنية نموذجية شائعة تستخدم في العديد من مهام معالجة اللغة الطبيعية، بما في ذلك الترجمة الآلية وتوليد النص وفهم اللغة. تم تقديمه بواسطة Vaswani et al. في مقالة "الاهتمام هو كل ما تحتاجه". تتكون بنية المحول من مكونين رئيسيين: المشفر ووحدة فك التشفير. يتكون كل من المشفر ومفكك التشفير من طبقات متعددة من الاهتمام الذاتي والشبكات العصبية ذات التغذية الأمامية. الفكرة الرئيسية وراء المحول هي استخدام آليات الانتباه الذاتي، والتي تسمح للنموذج بالتركيز على أجزاء مختلفة من سلسلة الدخل عند إنشاء سلسلة الخرج. في الشكل التالي نظرة عامة عالية المستوى على بنية المحولات.
 <br>
 <br>
-<br>
-<br>
 ![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
-<br>
 <br>
 <br>
 * **Encoder.** The input sequence is first passed through an embedding layer, which maps each token to a continuous vector representation -followed by positional encoding to provide information about the position of tokens in the sequence. The embedded input is then processed by a stack of identical encoder layers. Each encoder layers consists of a multi-head self-attention mechanism, followed by a feed-forward neural network. The self-attention mechanism allows the *encoder* to attend to different positions in the input sequence and capture dependencies between tokens. The output of the encoder is a set of encoded representations for each token in the input sequence.
@@ -36,19 +33,15 @@ The Transformer architecture is a popular model architecture used for various na
 يتم تمرير خرج وحدة فك التشفير إلى طبقة خطية متبوعة بدالة تنشيط سوفتماكس لإنتاج التوزيع الاحتمالي على المفردات المستهدفة.
 <br>
 <br>
-<br>
 
 The following figure shows encoder-decoder architecture of the transformer, with the encoder shown in the upper half of the figure and the decoder in the lower half. It is worth saying that this figure represents the the "inference phase". Here it should be noted that the decoder’s mechanism in the inference phase is slightly different in the training phase, and we will understand that later.
 
 يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي. تجدر الإشارة إلا أن هذا الشكل يمثل "مرحلة الاستدلال". هنا تجدر الإشارة إلى أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً في مرحلة التدريب، وسنفهم ذلك لاحقًا.
 <br>
 <br>
-<br>
 ![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
 <br>
 <br>
-<br>
-
 We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence (EOS) token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and "Zeit". Now it gets these two as an input as well as all the encoder's outputs to predict the next token, "fliegt". In the next step the decoder gets "fliegt" as an additional input. We repeat the process until the decoder predicts the EOS token or we reached a maximum length.
 
 نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات CNN، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS.
@@ -315,8 +308,8 @@ Now, we have our data ready to be fed into a model.
 
 ## Transformer Building Blocks
 We will now build each component of the Transformer independently.
-
-
+<br>
+<br>
 ### Positional information
 
 Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
@@ -330,7 +323,6 @@ Positional encoding is a technique used in transformers to incorporate the posit
 The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
 
 In this section we will investigate the two approaches: **Learned Positional Embeddings** and ٍ **Sinusoidal positional encoding**. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
-
 
 #### Sinusoidal positional encoding
 
@@ -461,7 +453,6 @@ tf.Tensor(
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
 
-
 #### Learned Positional Embeddings
 
 Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
@@ -555,8 +546,8 @@ tf.Tensor(
 ```
 
 By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
-
-
+<br>
+<br>
 ### Embedding layer
 
 Now we are going to build the Embeddings layer. This layer will take `inputs_ids` and associate them with primitive representations and add positional information to them.
@@ -686,7 +677,8 @@ Now we are done building the embedding layer!
 The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
 Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
-
+<br>
+<br>
 ### Self-Attention
 
 Self-attention, also known as intra-attention, is a mechanism in the Transformer architecture that allows an input sequence to attend to other positions within itself. It is a key component of both the encoder and decoder modules in Transformers. In self-attention, each position in the input sequence generates three vectors: Query (Q), Key (K), and Value (V). These vectors are linear projections of the input embeddings. The self-attention mechanism then computes a weighted sum of the values (V) based on the similarity between the query (Q) and key (K) vectors. The weights are determined by the dot product between the query and key vectors, followed by an application of the softmax function to obtain the attention distribution. This attention distribution represents the importance or relevance of each position to the current position.
@@ -769,8 +761,8 @@ class AttentionHead(tf.keras.layers.Layer):
 We’ve initialized three independent linear layers that apply matrix multiplication to the embedding vectors to produce tensors of shape *[batch_size, seq_len, head_dim]*, where `head_dim` is the number of dimensions we are projecting into. Although `head_dim` does not have to be smaller than the number of embedding dimensions of the tokens (`embed_dim`), in practice it is chosen to be a multiple of `embed_dim` so that the computation across each head is constant. For example, BERT has *12* attention heads, so the dimension of each head is *768/12 = 64*.
 
 There is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
-
-
+<br>
+<br>
 ### Multi-headed attention
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
@@ -878,8 +870,8 @@ tf.Tensor(
   [-2.4666185  -0.09850129  1.303617   -0.2874905 ]
   [-2.549143   -0.1712878   1.3354063  -0.39174497]]], shape=(1, 4, 4), dtype=float32)
 ```
-
-
+<br>
+<br>
 ### The Feed-Forward Layer and Normalization
 
 The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**.
@@ -943,8 +935,8 @@ class FeedForward(tf.keras.layers.Layer):
 It is important to note that when using a feed-forward layer like `dense`, it is typically applied to a tensor with a shape of `(batch_size, input_dim)`. In this case, the layer operates independently on each element of the batch dimension. This applies to all dimensions except for the last one. Therefore, when we pass a tensor with a shape of `(batch_size, seq_len, hidden_dim)`, the feed-forward layer is applied to each token embedding of the batch and sequence separately, which aligns perfectly with our desired behavior.
 
 **Adding Layer Normalization.** When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
-
-
+<br>
+<br>
 ### Encoder layer
 
 Now that we've built all the main parts of the encoder layer, we'll put them together to build it:
@@ -1065,8 +1057,8 @@ tf.Tensor(
 ```
 
 We’ve now implemented our first transformer encoder layer from scratch!
-
-
+<br>
+<br>
 ### Decoder
 
 The main difference between the decoder and encoder is that the decoder has two attention sublayers:
@@ -1270,15 +1262,94 @@ tf.Tensor(
 ```
 
 Now we have finished building the main components of the model!
+<br>
+<br>
+### Transformer Model
+Now, after we have built the necessary ingredients, and tested them. We can build in safety our transformer model.
+
+```
+import tensorflow as tf
+
+class Transformer(tf.keras.Model):
+    """
+    Transformer model implementation for sequence-to-sequence tasks.
+
+    Args:
+        config: Configuration object containing model hyperparameters.
+
+    Attributes:
+        enc_embed_layer: Embeddings layer for the encoder inputs.
+        dec_embed_layer: Embeddings layer for the decoder inputs.
+        encoder: List of encoder layers.
+        decoder: List of decoder layers.
+        dropout: Dropout layer for regularization.
+        output_layer: Dense layer for output prediction.
+
+    Methods:
+        call: Forward pass of the transformer model.
+    """
+
+    def __init__(self, config):
+        super(Transformer, self).__init__()
+        self.enc_embed_layer = Embeddings(config)
+        self.dec_embed_layer = Embeddings(config)
+        self.encoder = [Encoder(config) for _ in range(config.num_layers)]
+        self.decoder = [Decoder(config) for _ in range(config.num_layers)]
+        self.dropout = tf.keras.layers.Dropout(config.final_dropout_prob)
+        self.output_layer = tf.keras.layers.Dense(config.vocab_size)
+
+    def call(self, inputs, training=False):
+        """
+        Forward pass of the transformer model.
+
+        Args:
+            source_inputs: Input tensor for the encoder.
+            target_inputs: Input tensor for the decoder.
+            training: Boolean flag indicating whether the model is in training mode or not.
+
+        Returns:
+            Output logits of the transformer model.
+        """
+        source_inputs = inputs["encoder_inputs"]
+        target_inputs = inputs["decoder_inputs"]
+        print("source_inputs shape:", source_inputs.shape)
+        print("target_inputs shape:", target_inputs.shape)
 
 
+        x_enc = self.enc_embed_layer(source_inputs)
+
+        x_dec = self.dec_embed_layer(target_inputs)
+
+        for encoder_layer in self.encoder:
+            x_enc = encoder_layer(x_enc, training=training)
+
+        # Remove the mask used in the encoder as it's not needed in the decoder
+        x_enc._keras_mask = None
+
+        for decoder_layer in self.decoder:
+            x_dec = decoder_layer(x_dec, x_enc, training=training)
+
+        x_dec = self.dropout(x_dec, training=training)
+        x_logits = self.output_layer(x_dec)
+
+        # Remove the mask from the logits as it's not needed in the loss function
+        x_logits._keras_mask = None
+
+        return x_logits
+```
+
+All are done, Let's go train our model!
+<br>
+<br>
 ## End-to-end Transformer
-
+<br>
+<br>
 We will train the end-to-end Transformer model, which is responsible for mapping the source sequence and the target sequence to predict the target sequence one step ahead. This model seamlessly integrates the components we have developed: the Embedding layer, the Encoder, and the Decoder. Both the Encoder and the Decoder can be stacked to create more powerful versions as they maintain the same shape.
-
+<br>
+<br>
 ### Prepare the Transformer Model for Training
 
-Before training the Transformer, we need to determine the training strategy. In accordance with the paper "Attention Is All You Need," we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
+Before training the Transformer, we need to determine the training strategy. In accordance with the paper *Attention Is All You Need*, we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
 
 During the warmup phase, the learning rate is increased in a linear manner or according to a specific schedule until it reaches a predefined value. The objective of this warmup phase is to enable the model to explore a wider range of solutions during the initial training phase when the gradients might be large and unstable. The specific formula for the learning rate warmup is as follows:
 
@@ -1286,13 +1357,10 @@ During the warmup phase, the learning rate is increased in a linear manner or ac
 learning_rate = d_model^(-0.5) * min(step_num^(-0.5), step_num * warmup_steps^(-1.5))
 ```
 
-Here, `d_model` represents the dimensionality of the model, `step_num` indicates the current training step, and `warmup_steps` denotes the number of warmup steps. Typically, `warmup_steps` is set to a few thousand or a fraction of the total training steps.
+Here, `d_model` represents the dimensionality of the model, `step_num` indicates the current training step, and `warmup_steps` denotes the number of warmup steps. Typically, `warmup_steps` is set to a few thousand or a fraction of the total training steps. The motivation behind learning rate warmup is to address two challenges that often occur at the beginning of training:
 
-The motivation behind learning rate warmup is to address two challenges that often occur at the beginning of training:
-
-1. Large Gradient Magnitudes: In the initial stages of training, the model parameters are randomly initialized, and the gradients can be large. If a high learning rate is applied immediately, it can cause unstable updates and prevent the model from converging. Warmup allows the model to stabilize by starting with a lower learning rate and gradually increasing it.
-
-2. Exploration of the Solution Space: The model needs to explore a wide range of solutions to find an optimal or near-optimal solution. A high learning rate at the beginning may cause the model to converge prematurely to suboptimal solutions. Warmup enables the model to explore the solution space more effectively by starting with a low learning rate and then increasing it to search for better solutions.
+1. **Large Gradient Magnitudes.** In the initial stages of training, the model parameters are randomly initialized, and the gradients can be large. If a high learning rate is applied immediately, it can cause unstable updates and prevent the model from converging. Warmup allows the model to stabilize by starting with a lower learning rate and gradually increasing it.
+2. **Exploration of the Solution Space.** The model needs to explore a wide range of solutions to find an optimal or near-optimal solution. A high learning rate at the beginning may cause the model to converge prematurely to suboptimal solutions. Warmup enables the model to explore the solution space more effectively by starting with a low learning rate and then increasing it to search for better solutions.
 
 Let's implement the scheduler:
 
@@ -1348,6 +1416,7 @@ class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
 ```
 
 This corresponds to increasing the learning rate linearly for the first `warmup_steps` training steps, and decreasing it thereafter proportionally to the inverse square root of the step number. You can see how the learning rate values change with each time step with the following code:
+
 ```
 import matplotlib.pyplot as plt
 
@@ -1367,8 +1436,9 @@ class Config:
 
 config = Config()
 
+d = 768
 lr = LrSchedule(config)
-optimizer = tf.keras.optimizers.Adam(lr)
+optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
 plt.plot(lr(tf.range(40000, dtype=tf.float32)))
 plt.ylabel('Learning Rate')
@@ -1430,8 +1500,38 @@ def masked_accuracy(label, pred):
     return tf.reduce_sum(match) / tf.reduce_sum(mask)
 ```
 
-However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like BLEU, METEOR, ROUGE, or CIDEr, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence.
-
-Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
-
+However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like *BLEU*, *METEOR*, *ROUGE*, or *CIDEr*, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence. Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
+<br>
+<br>
 ### Training the Transformer
+
+```
+class Config:
+    def __init__(self):
+        self.sequence_length = 60
+        self.hidden_size = 512
+        self.frequency_factor = 10000
+        self.vocab_size = 30000
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 6
+        self.intermediate_fc_size = self.hidden_size * 4
+        self.warmup_steps = 4000
+        self.num_layers = 6
+        self.final_dropout_prob = 0.5
+        self.epochs = 20
+
+config = Config()
+
+transformer = Transformer(config)
+
+lr = LrSchedule(config)
+optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+transformer.compile(loss=masked_loss, optimizer=optimizer, metrics=[masked_accuracy])
+
+history = transformer.fit(train_ds, epochs=config.epochs, validation_data=val_ds)
+```
+
+## Inference
+
+## Conclusion
