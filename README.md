@@ -3,7 +3,9 @@
 The task of translating text from one language into another is a common task. In this repo I'm going to construct and demonstrate a naive model for an English to French translation task using TensorFlow, which is inspired by the model presented in the "Attention Is All You Need" paper. With this repo, I aim to build a reference that may be useful to newcomers or someone who wants to understand or build Transformers from scratch.
 
 تعتبر مهمة ترجمة النص من لغة إلى لغة أخرى من المهام الشائعة. سأقوم في هذا الريبو ببناء وشرح نموذج بسيط لمهمة الترجمة من اللغة الإنجليزية إلى اللغة الفرنسية باستخدام تنسرفلو، وهو مستلهم من النموذج الذي تم تقديمه في ورقة "الانتباه هو كل ماتحتاجه". أهدف من خلال هذا المشروع إلى بناء مرجع قد يفيد الوافدين الجدد أو أحدًا ما يريد أن يفهم أو يبني المحولات من الصفر.
-
+<br>
+<br>
+<br>
 ## Transformer architecture
 
 The Transformer architecture is a popular model architecture used for various natural language processing tasks, including machine translation, text generation, and language understanding. It was introduced by Vaswani et al. in the paper "Attention Is All You Need". The Transformer architecture consists of two main components: the encoder and the decoder. Both the encoder and decoder are composed of multiple layers of self-attention and feed-forward neural networks. The key idea behind the Transformer is the use of self-attention mechanisms, which allow the model to focus on different parts of the input sequence when generating the output. In the following figure a high-level overview of the Transformer architecture.
@@ -13,11 +15,10 @@ The Transformer architecture is a popular model architecture used for various na
 <br>
 <br>
 <br>
-
 ![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
-
-
-
+<br>
+<br>
+<br>
 * **Encoder.** The input sequence is first passed through an embedding layer, which maps each token to a continuous vector representation -followed by positional encoding to provide information about the position of tokens in the sequence. The embedded input is then processed by a stack of identical encoder layers. Each encoder layers consists of a multi-head self-attention mechanism, followed by a feed-forward neural network. The self-attention mechanism allows the *encoder* to attend to different positions in the input sequence and capture dependencies between tokens. The output of the encoder is a set of encoded representations for each token in the input sequence.
 
 تُمرّر سلسلة الدخل إلى طبقة تضمين تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك ترميّز موضعي يهدف إلى تقديم معلومات حول مواقع الوحدات النصية ضمن سلسلة الدخل. تجري معالجة هذه التضمينات بعد ذلك من خلال طبقات المشفّر المتماثلة. كل طبقة تشفير تتألف من طبقة انتباه ذاتي متعدد الرؤوس متبوعة بطبقة تغذية أمامية. تسمح آلية الانتباه الذاتي للمشفّر بمشاهدة المواقع المختلفة لسلسلة الدخل، والتقاط التبعيات بين الوحدات النصية. أي بمعنى آحر، تسمح له بمعرفة مدى ارتباط كل كلمة مع الكلمات الأخرى. خرج المشفّر هو تمثيّل جديد لكل وحدة نصيّة من سلسلة الدخل.
@@ -43,10 +44,10 @@ The following figure shows encoder-decoder architecture of the transformer, with
 <br>
 <br>
 <br>
-
 ![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
-
-
+<br>
+<br>
+<br>
 We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence (EOS) token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and "Zeit". Now it gets these two as an input as well as all the encoder's outputs to predict the next token, "fliegt". In the next step the decoder gets "fliegt" as an additional input. We repeat the process until the decoder predicts the EOS token or we reached a maximum length.
 
 نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات CNN، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS.
@@ -54,6 +55,7 @@ We’ll look at each of the components in detail shortly, but we can already see
 
 Here are the steps to build an English to French translation model using the Transformers architecture.
 فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
+
 
 ## Data preparation
 
@@ -69,7 +71,6 @@ We'll be working with an [English-to-French translation dataset](https://ankiweb
     text_file = pathlib.Path(text_file).parent/"fra.txt"
     print(text_file)
     ```
-
     ```
     Output:
     /root/.keras/datasets/fra.txt
@@ -202,7 +203,7 @@ Now we can save what we do for the subsequent steps:
         pickle.dump(data, fp)
     ```
 
-And we can open the files again using:
+We can open the files again using:
     ```
     with open("vectorize.pickle", "rb") as fp:
         data = pickle.load(fp)
@@ -215,7 +216,7 @@ And we can open the files again using:
     fra_vectorizer = TextVectorization.from_config(data["fravec_config"])
     fra_vectorizer.set_weights(data["fravec_weights"])
     ```
-    
+
 Now we have to define how we will pass the data to the model. There are several ways to do this:
 * Present the data as a NumPy array or a tensor (Faster, but need to load all data into memory).
 * Create a Python generator function and let the loop read data from it (Fetched from the hard disk when needed, rather than being loaded all into memory).
@@ -227,7 +228,7 @@ Now we have to define how we will pass the data to the model. There are several 
     * `map(func)`: Applying a transform (function) on data batches.
     * [You can read more here](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
     * [ِAnd here](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517).
-        
+
     ```
     from tensorflow.data import AUTOTUNE
     
@@ -306,22 +307,25 @@ Now we have to define how we will pass the data to the model. There are several 
 
 Now, we have our data ready to be fed into a model.
 
+
 ## Transformer Building Blocks
 We will now build each component of the Transformer independently.
+
 
 ### Positional information
 
 Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
 
-1. **Learned Positional Embeddings:** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
+* **Learned Positional Embeddings.** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
 
-2. **Relative Positional Encodings:** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
+* **Relative Positional Encodings.** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
 
-3. **Hybrid Approaches:** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
+* **Hybrid Approaches.** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
 
 The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
 
 In this section we will investigate the two approaches: **Learned Positional Embeddings** and ٍ **Sinusoidal positional encoding**. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
+
 
 #### Sinusoidal positional encoding
 
@@ -330,7 +334,7 @@ The most commonly used method for positional encoding in transformers is the sin
     PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
     PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
 
-where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
+Where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
 
     ```
     import tensorflow as tf
@@ -412,7 +416,7 @@ where PE(pos, 2i) represents the i-th dimension of the positional encoding for t
             return config
     ```
 
-**Testing:**
+Testing:
     ```
     # Define the configuration
     class Config:
@@ -438,7 +442,8 @@ where PE(pos, 2i) represents the i-th dimension of the positional encoding for t
     print("Outputs:")
     print(input_ids)
     print(output_embeddings)
-    """
+    ```
+    ```
     Outputs:
     tf.Tensor([[2 0 0 0]], shape=(1, 4), dtype=int32)
     tf.Tensor(
@@ -446,16 +451,15 @@ where PE(pos, 2i) represents the i-th dimension of the positional encoding for t
      [ 0.84147096 -0.50636566  0.5403023   0.8623189 ]
      [ 0.9092974  -0.87329733 -0.4161468   0.48718765]
      [ 0.14112    -0.99975586 -0.9899925  -0.02209662]], shape=(4, 4), dtype=float32)
-    """
     ```
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
+
 
 #### Learned Positional Embeddings
 
 Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
 Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings or intermediate representations of the model.
-
     ```
     import tensorflow as tf
     
@@ -505,8 +509,7 @@ Instead of relying solely on fixed positional encodings (e.g., sine or cosine fu
             return config
     ```
 
-**Testing:**
-    
+Testing:    
     ```
     # Define the configuration
     class Config:
@@ -534,23 +537,22 @@ Instead of relying solely on fixed positional encodings (e.g., sine or cosine fu
     # Print the output positional embeddings
     print("Outputs:")
     print(output_embeddings)
-    
-    """
+    ```
+    ```
     Outputs:
     tf.Tensor(
     [[[-0.02825731 -0.00217507  0.01578121 -0.01750519]
       [ 0.00112041 -0.03614271  0.03306187 -0.02413228]
       [ 0.00990455 -0.00736488  0.03470118 -0.02544773]
       [ 0.02571186 -0.02450178 -0.02327818  0.04356712]]], shape=(1, 4, 4), dtype=float32)
-    """
     ```
 
 By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
 
+
 ### Embedding layer
 
 Now we are going to build the Embeddings layer. This layer will take `inputs_ids` and associate them with primitive representations and add positional information to them.
-
     ```
     import tensorflow as tf
     
@@ -631,8 +633,7 @@ Now we are going to build the Embeddings layer. This layer will take `inputs_ids
             return config
     ```
 
-**Testing:**
-
+Testing:
     ```
     # Define the configuration
     class Config:
@@ -662,14 +663,14 @@ Now we are going to build the Embeddings layer. This layer will take `inputs_ids
     # Print the output positional embeddings
     print("Outputs:")
     print(output_embeddings)
-    """
+    ```
+    ```
     Outputs:
     tf.Tensor(
     [[[ 1.1676207  -0.2399907  -0.48948863 -0.43814147]
       [-0.11419237  0.06112379  0.4712959  -0.41822734]
       [ 0.6345568  -0.9779921   0.04900781  0.2944275 ]
       [ 1.2179315  -0.09482005 -0.9809958  -0.14211564]]], shape=(1, 4, 4), dtype=float32)
-    """
     ```
 
 Now we are done building the embedding layer!
@@ -695,13 +696,13 @@ The weighted sum of values, weighted by the attention distribution, is the outpu
         Attention head implementation.
     
         Args:
-            head_dim (int): Dimensionality of the attention head.
+            head_dim: Dimensionality of the attention head.
     
         Attributes:
-            head_dim (int): Dimensionality of the attention head.
-            query_weights (tf.keras.layers.Dense): Dense layer for query projection.
-            key_weights (tf.keras.layers.Dense): Dense layer for key projection.
-            value_weights (tf.keras.layers.Dense): Dense layer for value projection.
+            head_dim: Dimensionality of the attention head.
+            query_weights: Dense layer for query projection.
+            key_weights: Dense layer for key projection.
+            value_weights: Dense layer for value projection.
         """
     
         def __init__(self, head_dim, **kwargs):
@@ -714,16 +715,16 @@ The weighted sum of values, weighted by the attention distribution, is the outpu
     
         def call(self, query, key, value, mask=None):
             """
-            Applies attention mechanism to the input tensors.
+            Applies attention mechanism to the input query, key, and value tensors.
     
             Args:
-                query (tf.Tensor): Query tensor of shape (batch_size, len_q, dim).
-                key (tf.Tensor): Key tensor of shape (batch_size, len_k, dim).
-                value (tf.Tensor): Value tensor of shape (batch_size, len_v, dim).
-                mask (tf.Tensor, optional): Padding mask tensor of shape (batch_size, len_k) or None.
+                query: Query tensor.
+                key: Key tensor.
+                value: Value tensor.
+                mask: Optional mask tensor.
     
             Returns:
-                tf.Tensor: Updated value embeddings after applying attention mechanism.
+                Updated value embeddings after applying attention mechanism.
             """
             query = self.query_weights(query)
             key = self.key_weights(key)
@@ -732,7 +733,8 @@ The weighted sum of values, weighted by the attention distribution, is the outpu
             att_scores = tf.matmul(query, tf.transpose(key, perm=[0, 2, 1])) / tf.math.sqrt(tf.cast(tf.shape(query)[-1], tf.float32))
     
             if mask is not None:
-                att_scores += (1 - tf.cast(mask, dtype=tf.float32)) * -1e9 # Its principle is explained later in the decoder section
+                mask = tf.cast(mask, dtype=tf.bool)
+                att_scores = tf.where(mask, att_scores, tf.constant(-1e9, dtype=att_scores.dtype))
     
             att_weights = tf.nn.softmax(att_scores, axis=-1)
             n_value = tf.matmul(att_weights, value)
@@ -744,7 +746,7 @@ The weighted sum of values, weighted by the attention distribution, is the outpu
             Returns the configuration of the attention head layer.
     
             Returns:
-                dict: Configuration dictionary.
+                Configuration dictionary.
             """
             config = super().get_config()
             config.update({
@@ -760,115 +762,114 @@ We’ve initialized three independent linear layers that apply matrix multiplica
 
 There is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
 
+
 ### Multi-headed attention
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
 
-```
-class MultiHeadAttention(tf.keras.layers.Layer):
-    """
-    Multi-head attention layer implementation.
-
-    Args:
-        config: Configuration object containing hyperparameters.
-
-    Attributes:
-        supports_masking: Boolean indicating if the layer supports masking.
-        hidden_size: Dimensionality of the hidden state.
-        num_heads: Number of attention heads.
-        head_dim: Dimensionality of each attention head.
-        attention_heads: List of AttentionHead layers.
-        fc: Fully connected layer for final projection.
-    """
-
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
-        self.supports_masking = True
-        self.hidden_size = config.hidden_size
-        self.num_heads = config.num_heads
-        self.head_dim = config.hidden_size // config.num_heads
-        self.attention_heads = [AttentionHead(self.head_dim) for _ in range(self.num_heads)]
-        self.fc = tf.keras.layers.Dense(config.hidden_size)
-
-    def call(self, query, key, value, mask=None):
+    ```
+    class MultiHeadAttention(tf.keras.layers.Layer):
         """
-        Applies multi-head attention mechanism to the input query, key, and value tensors.
-
+        Multi-head attention layer implementation.
+    
         Args:
-            query: Query tensor (bs, len_q, dim).
-            key: Key tensor (bs, len_k, dim).
-            value: Value tensor (bs, len_v, dim).
-            mask: Padding mask tensor (bs, len) or None.
-
-        Returns:
-            Updated hidden state after applying multi-head attention mechanism.
+            config: Configuration object containing hyperparameters.
+    
+        Attributes:
+            supports_masking: Boolean indicating if the layer supports masking.
+            hidden_size: Dimensionality of the hidden state.
+            num_heads: Number of attention heads.
+            head_dim: Dimensionality of each attention head.
+            attention_heads: List of AttentionHead layers.
+            fc: Fully connected layer for final projection.
         """
-        attention_outputs = [attention_head(query, key, value, mask=mask) for attention_head in self.attention_heads]
-        hidden_state = tf.concat(attention_outputs, axis=-1)
-        hidden_state = self.fc(hidden_state)
-        return hidden_state
-
-    def get_config(self):
-        """
-        Returns the configuration of the multi-head attention layer.
-
-        Returns:
-            Configuration dictionary.
-        """
-        config = super().get_config()
-        config.update({
-            "hidden_size": self.hidden_size,
-            "num_heads": self.num_heads,
-            "head_dim": self.head_dim,
-            "attention_heads": self.attention_heads,
-            "fc": self.fc,
-        })
-        return config
-```
+    
+        def __init__(self, config, **kwargs):
+            super().__init__(**kwargs)
+            self.supports_masking = True
+            self.hidden_size = config.hidden_size
+            self.num_heads = config.num_heads
+            self.head_dim = config.hidden_size // config.num_heads
+            self.attention_heads = [AttentionHead(self.head_dim) for _ in range(self.num_heads)]
+            self.fc = tf.keras.layers.Dense(config.hidden_size)
+    
+        def call(self, query, key, value, mask=None):
+            """
+            Applies multi-head attention mechanism to the input query, key, and value tensors.
+    
+            Args:
+                query: Query tensor.
+                key: Key tensor.
+                value: Value tensor.
+                mask: Optional mask tensor.
+    
+            Returns:
+                Updated hidden state after applying multi-head attention mechanism.
+            """
+            attention_outputs = [attention_head(query, key, value, mask=mask) for attention_head in self.attention_heads]
+            hidden_state = tf.concat(attention_outputs, axis=-1)
+            hidden_state = self.fc(hidden_state)
+            return hidden_state
+    
+        def get_config(self):
+            """
+            Returns the configuration of the multi-head attention layer.
+    
+            Returns:
+                Configuration dictionary.
+            """
+            config = super().get_config()
+            config.update({
+                "hidden_size": self.hidden_size,
+                "num_heads": self.num_heads,
+                "head_dim": self.head_dim,
+                "attention_heads": self.attention_heads,
+                "fc": self.fc,
+            })
+            return config
+    ```
 
 Notice that the concatenated output from the attention heads is also fed through a final linear layer to produce an output tensor of shape [batch_size, seq_len, hidden_dim] that is suitable for the feed-forward network downstream.
 
-**Testing:**
-
-```
-# Define the configuration
-class Config:
-    def __init__(self):
-        self.sequence_length = 4
-        self.hidden_size = 4
-        self.frequency_factor = 10000
-        self.max_position_embeddings = 4
-        self.vocab_size = 10
-        self.positional_information_type = 'embs'
-        self.hidden_dropout_prob = 0.1
-        self.num_heads = 2
-
-config = Config()
-
-Embeddings_layer = Embeddings(config)
-
-# Create a sample input tensor with token IDs
-input_ids = tf.constant([[2, 2, 0, 0]])
-
-# Apply Embeddings_layer
-x = Embeddings_layer(input_ids)
-
-# Apply MultiHeadAttention
-multihead_attn = MultiHeadAttention(config)
-x = multihead_attn(x, x, x)
-
-print("Outputs:")
-print(x)
-
-"""
-Outputs:
-tf.Tensor(
-[[[ 0.43587503  0.40965644 -0.15099481  0.23630296]
-  [ 0.41958869  0.41963676 -0.13168165  0.2157597 ]
-  [ 0.43004638  0.4186452  -0.13842276  0.2226191 ]
-  [ 0.4305511   0.41857314 -0.13877344  0.2229785 ]]], shape=(1, 4, 4), dtype=float32)
-"""
-```
+Testing:
+    ```
+    # Define the configuration
+    class Config:
+        def __init__(self):
+            self.sequence_length = 4
+            self.hidden_size = 4
+            self.frequency_factor = 10000
+            self.max_position_embeddings = 4
+            self.vocab_size = 10
+            self.positional_information_type = 'embs'
+            self.hidden_dropout_prob = 0.1
+            self.num_heads = 2
+    
+    config = Config()
+    
+    Embeddings_layer = Embeddings(config)
+    
+    # Create a sample input tensor with token IDs
+    input_ids = tf.constant([[2, 2, 0, 0]])
+    
+    # Apply Embeddings_layer
+    x = Embeddings_layer(input_ids)
+    
+    # Apply MultiHeadAttention
+    multihead_attn = MultiHeadAttention(config)
+    x = multihead_attn(x, x, x)
+    
+    print("Outputs:")
+    print(x)
+    ```
+    ```
+    Outputs:
+    tf.Tensor(
+    [[[-2.574672   -0.17047548  1.3618734  -0.37746006]
+      [-2.5156658  -0.16493037  1.3059906  -0.39567095]
+      [-2.4666185  -0.09850129  1.303617   -0.2874905 ]
+      [-2.549143   -0.1712878   1.3354063  -0.39174497]]], shape=(1, 4, 4), dtype=float32)
+    ```
 
 
 ### The Feed-Forward Layer and Normalization
@@ -933,14 +934,12 @@ In the literature, a general guideline suggests setting the hidden size of the f
 
 It is important to note that when using a feed-forward layer like `dense`, it is typically applied to a tensor with a shape of `(batch_size, input_dim)`. In this case, the layer operates independently on each element of the batch dimension. This applies to all dimensions except for the last one. Therefore, when we pass a tensor with a shape of `(batch_size, seq_len, hidden_dim)`, the feed-forward layer is applied to each token embedding of the batch and sequence separately, which aligns perfectly with our desired behavior.
 
-**Adding Layer Normalization:**
+**Adding Layer Normalization.** When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
 
-When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
 
 ### Encoder layer
 
 Now that we've built all the main parts of the encoder layer, we'll put them together to build it:
-
     ```
     class Encoder(tf.keras.layers.Layer):
         """
@@ -1005,8 +1004,7 @@ Now that we've built all the main parts of the encoder layer, we'll put them tog
             return config
     ```
 
-**Testing:**
-
+Testing:
     ```
     # Define the configuration
     class Config:
