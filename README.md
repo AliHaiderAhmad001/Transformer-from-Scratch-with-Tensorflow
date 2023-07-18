@@ -1347,7 +1347,7 @@ All are done, Let's go train our model!
 We will train the end-to-end Transformer model, which is responsible for mapping the source sequence and the target sequence to predict the target sequence one step ahead. This model seamlessly integrates the components we have developed: the Embedding layer, the Encoder, and the Decoder. Both the Encoder and the Decoder can be stacked to create more powerful versions as they maintain the same shape.
 <br>
 <br>
-### Prepare the Transformer Model for Training
+### The Schedular
 
 Before training the Transformer, we need to determine the training strategy. In accordance with the paper *Attention Is All You Need*, we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
 
@@ -1448,6 +1448,7 @@ plt.show()
 
 By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
 
+### The Metrices
 Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values:
 
 ```
@@ -1501,6 +1502,32 @@ def masked_accuracy(label, pred):
 ```
 
 However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like *BLEU*, *METEOR*, *ROUGE*, or *CIDEr*, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence. Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
+<br>
+<br>
+### BLEU
+
+BLEU (Bilingual Evaluation Understudy) is a metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
+
+The BLEU metric works by comparing the n-grams (contiguous sequences of n words) of the candidate translation (output) to the n-grams of the reference translations (ground truth). It calculates a precision score for each n-gram and then combines the scores using a modified geometric mean, giving more weight to shorter n-grams. BLEU ranges from 0 to 1, with 1 being a perfect match with the reference translations ([read more](https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)).
+
+Here's how the BLEU metric is calculated:
+
+1. Calculate the n-gram precision for each n-gram size (usually up to 4-grams):
+   - Count the number of n-grams in the candidate translation that appear in the reference translations.
+   - Count the total number of n-grams in the candidate translation.
+
+2. Calculate the brevity penalty to account for translations that are shorter than the references. This penalizes overly short translations that can achieve high precision but may not cover the full meaning of the input.
+
+3. Combine the n-gram precisions using a modified geometric mean. The modified version addresses the issue of penalizing translations that have zero precision for a certain n-gram size. It replaces zero precisions with the lowest non-zero precision.
+
+4. Multiply the combined n-gram precisions by the brevity penalty to get the final BLEU score.
+
+```
+
+```
+
+However, it also has some limitations, such as sensitivity to sentence length and the fact that it relies solely on n-gram matching without considering semantic meaning. As a result, researchers often use multiple evaluation metrics, including BLEU, to get a more comprehensive understanding of the translation system's performance.
+
 <br>
 <br>
 ### Training the Transformer
