@@ -1448,13 +1448,13 @@ plt.show()
 
 By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
 
-### The Metrices
-Next, we are required to specify the loss metric and accuracy metric for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss and accuracy calculations are performed only on the non-padding elements, disregarding any padded values:
+### Loss Function
+Next, we are required to specify the loss function for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss (and accuracy) calculations are performed only on the non-padding elements, disregarding any padded values:
 
 ```
 import tensorflow as tf
 
-def masked_loss(label, pred):
+def scce_loss_func(label, pred):
     """
     Computes the masked loss between the predicted and target labels.
 
@@ -1476,7 +1476,28 @@ def masked_loss(label, pred):
     loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
     return loss
 
+When we are getting talking about loss function, we must refer to the *Label Smoothing*. It's a regularization technique commonly used in deep learning models, particularly in classification tasks, to improve generalization and prevent the model from becoming overly confident in its predictions. It addresses the issue where a model may assign a probability close to 1 to the predicted class and 0 to all other classes, leading to overfitting and potential sensitivity to small perturbations in the input. Label smoothing introduces a small amount of uncertainty or noise into the training process by modifying the target (ground truth) labels. Instead of using one-hot encoded labels with a single element set to 1 and all others set to 0, label smoothing distributes the probability mass among multiple classes ([read more](https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). In empirical studies, the improvement in machine translation performance due to label smoothing is typically in the range of 0.5% to 2%. However, these numbers are not fixed and can vary based on different factors. For certain datasets or model architectures, the improvement might be more significant, while for others, it might be less noticeable. One of the main challenges with using one-hot encoding and label smoothing in machine translation tasks with large vocabularies is the high dimensionality of the one-hot encoded vectors. As the vocabulary size increases, the one-hot encoded vectors become very sparse, leading to memory and computational inefficiencies. Here, we are not going to use it because of the limitations in the sources that we have. However, you could try it easily just by replacing `SparseCategoricalCrossentropy` with [`CategoricalCrossentropy`](https://github.com/keras-team/keras/tree/v2.13.1//keras/losses.py#L837), using the `label_smoothing` parameter, and representing the target sentences with one-hot encoding. Here's how you can use technique:
 
+```
+import tensorflow as tf
+
+def cce_loss_func(label, pred):
+    mask = label != 0
+    scc_loss = tf.keras.losses.CategoricalCrossentropy(
+        from_logits=True, label_smoothing=0.0, reduction='none')
+    label = tf.one_hot(tf.cast(label, tf.int32), 3)
+    loss = cc_loss(label, pred)
+    mask = tf.cast(mask, dtype=loss.dtype)
+    loss *= mask
+    loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
+    return loss
+```
+
+### Metrics
+
+It's common to use masked accuracy with this task, so let's implement it:
+
+```
 def masked_accuracy(label, pred):
     """
     Computes the masked accuracy between the predicted and target labels.
@@ -1504,7 +1525,8 @@ def masked_accuracy(label, pred):
 However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like *BLEU*, *METEOR*, *ROUGE*, or *CIDEr*, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence. Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
 <br>
 <br>
-### BLEU
+
+#### BLEU
 
 BLEU (Bilingual Evaluation Understudy) is a metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
 
