@@ -1341,12 +1341,15 @@ class Transformer(tf.keras.Model):
 All are done, Let's go train our model!
 <br>
 <br>
+
 ## End-to-end Transformer
+
 <br>
 <br>
 We will train the end-to-end Transformer model, which is responsible for mapping the source sequence and the target sequence to predict the target sequence one step ahead. This model seamlessly integrates the components we have developed: the Embedding layer, the Encoder, and the Decoder. Both the Encoder and the Decoder can be stacked to create more powerful versions as they maintain the same shape.
 <br>
 <br>
+
 ### The Schedular
 
 Before training the Transformer, we need to determine the training strategy. In accordance with the paper *Attention Is All You Need*, we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
@@ -1449,6 +1452,7 @@ plt.show()
 By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
 
 ### Loss Function
+
 Next, we are required to specify the loss function for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss (and accuracy) calculations are performed only on the non-padding elements, disregarding any padded values:
 
 ```
@@ -1475,6 +1479,7 @@ def scce_loss_func(label, pred):
     loss *= mask
     loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
     return loss
+```
 
 When we are getting talking about loss function, we must refer to the *Label Smoothing*. It's a regularization technique commonly used in deep learning models, particularly in classification tasks, to improve generalization and prevent the model from becoming overly confident in its predictions. It addresses the issue where a model may assign a probability close to 1 to the predicted class and 0 to all other classes, leading to overfitting and potential sensitivity to small perturbations in the input. Label smoothing introduces a small amount of uncertainty or noise into the training process by modifying the target (ground truth) labels. Instead of using one-hot encoded labels with a single element set to 1 and all others set to 0, label smoothing distributes the probability mass among multiple classes ([read more](https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). In empirical studies, the improvement in machine translation performance due to label smoothing is typically in the range of 0.5% to 2%. However, these numbers are not fixed and can vary based on different factors. For certain datasets or model architectures, the improvement might be more significant, while for others, it might be less noticeable. One of the main challenges with using one-hot encoding and label smoothing in machine translation tasks with large vocabularies is the high dimensionality of the one-hot encoded vectors. As the vocabulary size increases, the one-hot encoded vectors become very sparse, leading to memory and computational inefficiencies. Here, we are not going to use it because of the limitations in the sources that we have. However, you could try it easily just by replacing `SparseCategoricalCrossentropy` with [`CategoricalCrossentropy`](https://github.com/keras-team/keras/tree/v2.13.1//keras/losses.py#L837), using the `label_smoothing` parameter, and representing the target sentences with one-hot encoding. Here's how you can use technique:
 
@@ -1526,9 +1531,7 @@ However, it's important to note that accuracy alone may not provide a complete p
 <br>
 <br>
 
-#### BLEU
-
-BLEU (Bilingual Evaluation Understudy) is a metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
+BLEU (Bilingual Evaluation Understudy) is another metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
 
 The BLEU metric works by comparing the n-grams (contiguous sequences of n words) of the candidate translation (output) to the n-grams of the reference translations (ground truth). It calculates a precision score for each n-gram and then combines the scores using a modified geometric mean, giving more weight to shorter n-grams. BLEU ranges from 0 to 1, with 1 being a perfect match with the reference translations ([read more](https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)).
 
@@ -1545,7 +1548,62 @@ Here's how the BLEU metric is calculated:
 4. Multiply the combined n-gram precisions by the brevity penalty to get the final BLEU score.
 
 ```
+import tensorflow as tf
+import numpy as np
+from collections import Counter
 
+def compute_precision(candidate_ngrams, reference_ngrams):
+    candidate_counter = Counter(candidate_ngrams)
+    reference_counter = Counter(reference_ngrams)
+
+    # Calculate the intersection of n-grams in candidate and reference sentences
+    intersection = sum((candidate_counter & reference_counter).values())
+
+    # Total candidate n-grams
+    total_candidate = sum(candidate_counter.values())
+
+    # To avoid division by zero, set precision to a small value if there are no candidate n-grams
+    precision = intersection / total_candidate if total_candidate > 0 else 1e-10
+
+    return precision
+
+def compute_bleu(references, candidates, max_n=4):
+    precisions = []
+
+    # Tokenize and compute n-grams for each candidate-reference pair
+    for candidate, reference in zip(candidates, references):
+        candidate_tokens = candidate.split()
+        reference_tokens = reference.split()
+
+        # Calculate BLEU score for each n-gram up to max_n
+        for n in range(1, max_n + 1):
+            candidate_ngrams = [tuple(candidate_tokens[i:i+n]) for i in range(len(candidate_tokens) - n + 1)]
+            reference_ngrams = [tuple(reference_tokens[i:i+n]) for i in range(len(reference_tokens) - n + 1)]
+
+            precision_n = compute_precision(candidate_ngrams, reference_ngrams)
+            precisions.append(precision_n)
+
+    # Calculate the geometric mean of all the n-gram precisions
+    geometric_mean = np.exp(np.mean(np.log(np.maximum(precisions, 1e-10))))
+
+    # Calculate the brevity penalty
+    reference_lengths = [len(reference.split()) for reference in references]
+    candidate_lengths = [len(candidate.split()) for candidate in candidates]
+
+    closest_refs = [min(reference_lengths, key=lambda x: abs(x - candidate_len)) for candidate_len in candidate_lengths]
+
+    brevity_penalty = np.minimum(np.exp(1 - np.array(closest_refs) / np.array(candidate_lengths)), 1.0)
+
+    # Calculate the BLEU score
+    bleu_score = geometric_mean * brevity_penalty
+
+    return bleu_score
+
+# Example usage
+references = ["the quick brown fox jumped over the lazy dog"]
+candidates = ["the quick brown fox jumped over the lazy dog from space"]
+bleu_score = compute_bleu(references, candidates)
+print("BLEU Score:", bleu_score)  # Output: 0.78
 ```
 
 However, it also has some limitations, such as sensitivity to sentence length and the fact that it relies solely on n-gram matching without considering semantic meaning. As a result, researchers often use multiple evaluation metrics, including BLEU, to get a more comprehensive understanding of the translation system's performance.
