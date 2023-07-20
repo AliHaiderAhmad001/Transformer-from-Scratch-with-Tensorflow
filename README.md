@@ -42,14 +42,11 @@ The following figure shows encoder-decoder architecture of the transformer, with
 ![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
 <br>
 <br>
-We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence (EOS) token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and "Zeit". Now it gets these two as an input as well as all the encoder's outputs to predict the next token, "fliegt". In the next step the decoder gets "fliegt" as an additional input. We repeat the process until the decoder predicts the EOS token or we reached a maximum length.
 
-نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات CNN، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS.
+We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence (EOS) token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and "Zeit". Now it gets these two as an input as well as all the encoder's outputs to predict the next token, "fliegt". In the next step the decoder gets "fliegt" as an additional input. We repeat the process until the decoder predicts the EOS token or we reached a maximum length. Here are the steps to build an English to French translation model using the Transformers architecture:
 
 
-Here are the steps to build an English to French translation model using the Transformers architecture.
-
-فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
+نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات CNN، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS. فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
 
 
 ## Data preparation
@@ -1569,46 +1566,59 @@ def compute_precision(candidate_ngrams, reference_ngrams):
 
     return precision
 
-def compute_bleu(references, candidates, max_n=4):
-    precisions = []
+def compute_bleu_batch(references_batch, candidates_batch, max_n=4):
+    batch_size = len(references_batch)
+    total_bleu_score = 0.0
 
-    # Tokenize and compute n-grams for each candidate-reference pair
-    for candidate, reference in zip(candidates, references):
-        candidate_tokens = candidate.split()
-        reference_tokens = reference.split()
+    # Tokenize and compute n-grams for each candidate-reference pair in the batch
+    for i in range(batch_size):
+        references = references_batch[i]
+        candidates = candidates_batch[i]
 
-        # Calculate BLEU score for each n-gram up to max_n
-        for n in range(1, max_n + 1):
-            candidate_ngrams = [tuple(candidate_tokens[i:i+n]) for i in range(len(candidate_tokens) - n + 1)]
-            reference_ngrams = [tuple(reference_tokens[i:i+n]) for i in range(len(reference_tokens) - n + 1)]
+        precisions = []
 
-            precision_n = compute_precision(candidate_ngrams, reference_ngrams)
-            precisions.append(precision_n)
+        for candidate, reference in zip(candidates, references):
+            candidate_tokens = candidate.split()
+            reference_tokens = reference.split()
 
-    # Calculate the geometric mean of all the n-gram precisions
-    geometric_mean = np.exp(np.mean(np.log(np.maximum(precisions, 1e-10))))
+            # Calculate BLEU score for each n-gram up to max_n
+            for n in range(1, max_n + 1):
+                candidate_ngrams = [tuple(candidate_tokens[j:j + n]) for j in range(len(candidate_tokens) - n + 1)]
+                reference_ngrams = [tuple(reference_tokens[j:j + n]) for j in range(len(reference_tokens) - n + 1)]
 
-    # Calculate the brevity penalty
-    reference_lengths = [len(reference.split()) for reference in references]
-    candidate_lengths = [len(candidate.split()) for candidate in candidates]
+                precision_n = compute_precision(candidate_ngrams, reference_ngrams)
+                precisions.append(precision_n)
 
-    closest_refs = [min(reference_lengths, key=lambda x: abs(x - candidate_len)) for candidate_len in candidate_lengths]
+        # Calculate the geometric mean of all the n-gram precisions for this candidate-reference pair
+        geometric_mean = np.exp(np.mean(np.log(np.maximum(precisions, 1e-10))))
 
-    brevity_penalty = np.minimum(np.exp(1 - np.array(closest_refs) / np.array(candidate_lengths)), 1.0)
+        # Calculate the brevity penalty for this candidate-reference pair
+        reference_length = [len(reference.split()) for reference in references]
+        candidate_length = [len(candidate.split()) for candidate in candidates]
 
-    # Calculate the BLEU score
-    bleu_score = geometric_mean * brevity_penalty
+        closest_refs = [min(reference_length, key=lambda x: abs(x - candidate_len)) for candidate_len in candidate_length]
+        brevity_penalty = np.minimum(np.exp(1 - np.array(closest_refs) / np.array(candidate_length)), 1.0)
 
-    return bleu_score
+        # Calculate the BLEU score for this candidate-reference pair
+        bleu_score = geometric_mean * brevity_penalty
 
-# Example usage
-references = ["the quick brown fox jumped over the lazy dog"]
-candidates = ["the quick brown fox jumped over the lazy dog from space"]
-bleu_score = compute_bleu(references, candidates)
-print("BLEU Score:", bleu_score)  # Output: 0.78
+        total_bleu_score += bleu_score
+
+    # Calculate the average BLEU score over the entire batch
+    average_bleu_score = total_bleu_score / batch_size
+
+    return average_bleu_score[0]
+
+# Example usage with batch of sentences
+references_batch = [["the quick brown fox jumped over the lazy dog"], ["the quick brown fox jumped over the lazy dog"]]
+candidates_batch = [["the quick brown fox jumped over the lazy dog from space"], ["the quick brown fox jumped over the"]]
+bleu_score_batch = compute_bleu_batch(references_batch, candidates_batch)
+print("Average BLEU Score:", bleu_score_batch) # Average BLEU Score: [0.7687763]
 ```
 
 However, it also has some limitations, such as sensitivity to sentence length and the fact that it relies solely on n-gram matching without considering semantic meaning. As a result, researchers often use multiple evaluation metrics, including BLEU, to get a more comprehensive understanding of the translation system's performance.
+
+**Note:** This implementation you can use it to test the performance of the model later, but you can't use it during training, it needs somewhat boring modifications in order to comply with Tensorflow's operations. So if you want to use it, it is better to experience the implementation of the [Keras_nlp](https://keras.io/api/keras_nlp/metrics/bleu/) package.
 
 <br>
 <br>
