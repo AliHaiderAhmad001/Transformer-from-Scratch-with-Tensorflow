@@ -187,6 +187,7 @@ fra_vectorizer.adapt(train_fra_texts)
 ```
 
 Now we can save what we do for the subsequent steps (Optional):
+
 يمكنك حفظ العمل الذي قمت به حتى الآن كما يلي (اختياري):
 
 ```
@@ -203,7 +204,7 @@ with open("vectorize.pickle", "wb") as fp:
     pickle.dump(data, fp)
 ```
 
-We can open the files again using (فتح الملفات مرة أخرى باستخدام):
+We can open the files again using (فتح الملفات مرة أخرى):
 ```
 with open("vectorize.pickle", "rb") as fp:
     data = pickle.load(fp)
@@ -428,6 +429,7 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
 ```
 
 Testing:
+
 ```
 # Define the configuration
 class Config:
@@ -577,6 +579,7 @@ class Embeddings(tf.keras.layers.Layer):
 
     Args:
         config (object): Configuration object containing parameters.
+        vocab_size: Vocabulary size.
 
     Attributes:
         token_embeddings (tf.keras.layers.Embedding): Token embedding layer.
@@ -585,10 +588,10 @@ class Embeddings(tf.keras.layers.Layer):
         norm (tf.keras.layers.LayerNormalization): Layer normalization for normalization.
     """
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, vocab_size,  **kwargs):
         super(Embeddings, self).__init__(**kwargs)
         self.token_embeddings = tf.keras.layers.Embedding(
-            input_dim=config.vocab_size, output_dim=config.hidden_size
+            input_dim= vocab_size, output_dim=config.hidden_size
         )
         if config.positional_information_type == 'embs':
             self.PositionalInfo = PositionalEmbeddings(config)
@@ -647,6 +650,7 @@ class Embeddings(tf.keras.layers.Layer):
 ```
 
 Testing:
+
 ```
 # Define the configuration
 class Config:
@@ -655,15 +659,16 @@ class Config:
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.vocab_size = 10
         self.positional_information_type = 'embs'
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.hidden_dropout_prob = 0.1
-        
+
 
 config = Config()
 
 # Create an instance of the SinusoidalPositionalEncoding layer
-Embeddings_layer = Embeddings(config)
+Embeddings_layer = Embeddings(configو vocab_size = 10)
 
 # Create a sample input tensor with token IDs
 batch_size = 1
@@ -676,6 +681,14 @@ output_embeddings = Embeddings_layer(input_ids)
 # Print the output positional embeddings
 print("Outputs:")
 print(output_embeddings)
+"""
+Outputs:
+tf.Tensor(
+[[[ 1.1676207  -0.2399907  -0.48948863 -0.43814147]
+  [-0.11419237  0.06112379  0.4712959  -0.41822734]
+  [ 0.6345568  -0.9779921   0.04900781  0.2944275 ]
+  [ 1.2179315  -0.09482005 -0.9809958  -0.14211564]]], shape=(1, 4, 4), dtype=float32)
+"""
 ```
 ```
 Outputs:
@@ -854,14 +867,15 @@ class Config:
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.vocab_size = 10
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
 
 config = Config()
 
-Embeddings_layer = Embeddings(config)
+Embeddings_layer = Embeddings(config, 10)
 
 # Create a sample input tensor with token IDs
 input_ids = tf.constant([[2, 2, 0, 0]])
@@ -1029,7 +1043,8 @@ class Config:
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.vocab_size = 10
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1038,7 +1053,7 @@ class Config:
 
 config = Config()
 
-Embeddings_layer = Embeddings(config)
+Embeddings_layer = Embeddings(config, 10)
 
 # Create a sample input tensor with token IDs
 batch_size = 2
@@ -1055,7 +1070,6 @@ x = encoder(x)
 print("Outputs:")
 print(x)
 ```
-
 ```
 Outputs:
 tf.Tensor(
@@ -1230,7 +1244,8 @@ class Config:
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.vocab_size = 10
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1238,8 +1253,8 @@ class Config:
 
 config = Config()
 
-embeddings_layer1 = Embeddings(config)
-embeddings_layer2 = Embeddings(config)
+embeddings_layer1 = Embeddings(config, 10)
+embeddings_layer2 = Embeddings(config, 10)
 
 batch_size = 2
 seq_length = 4
@@ -1290,6 +1305,8 @@ class Transformer(tf.keras.Model):
 
     Args:
         config: Configuration object containing model hyperparameters.
+        source_vocab_size: The vocabulary size of the source language.
+        target_vocab_size: The vocabulary size of the target language.
 
     Attributes:
         enc_embed_layer: Embeddings layer for the encoder inputs.
@@ -1303,10 +1320,10 @@ class Transformer(tf.keras.Model):
         call: Forward pass of the transformer model.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, source_vocab_size, target_vocab_size):
         super(Transformer, self).__init__()
-        self.enc_embed_layer = Embeddings(config)
-        self.dec_embed_layer = Embeddings(config)
+        self.enc_embed_layer = Embeddings(config, source_vocab_size)
+        self.dec_embed_layer = Embeddings(config, target_vocab_size)
         self.encoder = [Encoder(config) for _ in range(config.num_layers)]
         self.decoder = [Decoder(config) for _ in range(config.num_layers)]
         self.dropout = tf.keras.layers.Dropout(config.final_dropout_prob)
@@ -1317,8 +1334,7 @@ class Transformer(tf.keras.Model):
         Forward pass of the transformer model.
 
         Args:
-            source_inputs: Input tensor for the encoder.
-            target_inputs: Input tensor for the decoder.
+            inputs: Input data.
             training: Boolean flag indicating whether the model is in training mode or not.
 
         Returns:
@@ -1326,9 +1342,6 @@ class Transformer(tf.keras.Model):
         """
         source_inputs = inputs["encoder_inputs"]
         target_inputs = inputs["decoder_inputs"]
-        print("source_inputs shape:", source_inputs.shape)
-        print("target_inputs shape:", target_inputs.shape)
-
 
         x_enc = self.enc_embed_layer(source_inputs)
 
@@ -1443,7 +1456,8 @@ class Config:
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.vocab_size = 10
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1645,27 +1659,43 @@ However, it also has some limitations, such as sensitivity to sentence length an
 class Config:
     def __init__(self):
         self.sequence_length = 60
-        self.hidden_size = 512
+        self.hidden_size = 256
         self.frequency_factor = 10000
-        self.vocab_size = 30000
+        self.source_vocab_size = 16721
+        self.target_vocab_size = 31405
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
-        self.num_heads = 6
+        self.num_heads = 8
         self.intermediate_fc_size = self.hidden_size * 4
         self.warmup_steps = 4000
-        self.num_layers = 6
+        self.num_layers = 2
         self.final_dropout_prob = 0.5
-        self.epochs = 20
+        self.epochs = 30
+        self.checkpoint_filepath = '/content/drive/MyDrive/Colab Notebooks/NMT/tmp/checkpoint'
 
 config = Config()
 
-transformer = Transformer(config)
+transformer = Transformer(config, self.source_vocab_size, self.target_vocab_size)
 
 lr = LrSchedule(config)
-optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-transformer.compile(loss=masked_loss, optimizer=optimizer, metrics=[masked_accuracy])
 
-history = transformer.fit(train_ds, epochs=config.epochs, validation_data=val_ds)
+early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+    mode='min',
+    patience=4)
+
+model_checkpoint= tf.keras.callbacks.ModelCheckpoint(
+    filepath=config.checkpoint_filepath,
+    monitor='val_loss',
+    mode='min',
+    save_best_only=True)
+
+optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+transformer.compile(loss=cce_loss,
+                    optimizer=optimizer,
+                    metrics=[masked_accuracy])
+
+history = transformer.fit(train_ds, epochs=config.epochs, validation_data=val_ds,
+                          callbacks=[early_stopping, model_checkpoint])
 ```
 
 ## Inference
