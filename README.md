@@ -329,15 +329,29 @@ We will now build each component of the Transformer independently.
 
 Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
 
+* **Sinusoidal positional encoding.** Is based on sine and cosine functions with different frequencies for each dimension of the embedding.
 * **Learned Positional Embeddings.** Instead of using fixed sinusoidal functions, learned positional embeddings are trainable parameters that are optimized during the model training. These embeddings can capture position-specific patterns and dependencies in the input sequence.
-
 * **Relative Positional Encodings.** In addition to absolute positional information, relative positional encodings take into account the relative distances or relationships between tokens. They can be used to model the dependencies between tokens at different positions in a more explicit manner.
-
-* **Hybrid Approaches.** Some models combine both learned positional embeddings and sinusoidal positional encodings to capture both the learned and fixed positional information. This hybrid approach can provide a flexible representation while also allowing the model to benefit from the sinusoidal encoding's ability to generalize across sequence lengths.
 
 The choice of positional encoding depends on the specific task, dataset, and model architecture. Sinusoidal positional encoding is widely used and has shown good performance in various transformer-based models. However, experimenting with different types of positional encodings can be beneficial to improve the model's ability to capture positional information effectively.
 
 In this section we will investigate the two approaches: **Learned Positional Embeddings** and ٍ **Sinusoidal positional encoding**. However, it may not be necessary to use complex positional encoding methods. The standard sinusoidal positional encoding used in the original Transformer model can still work well.
+
+
+التشفير الموضعي هو تقنية تُستخدم في المُحوّلات لدمج المعلومات الموضعية للكلمات أو الرموز في تضمينات المدخلات. نظرًا لعدم وجود أي مفهوم ضمني لترتيب الكلمات في المُحوّلات، يُساعد التشفير الموضعي النموذج على فهم التسلسل الزمني لسلسلة الوحدات النصية المُدخلة. عادةً ما يتم إضافة التشفير الموضعي إلى التضمينات قبل تغذيتها إلى طبقات المُشفِّر أو المُفَكِّك. يتم إضافة متجه التشفير الموضعي بالجمع عنصرًا بعنصر إلى التضمينات، مما يمنح كل وحدة نصية تمثيلًا فريدًا للموضع.
+
+تُستخدم ثلاثة أنواع شائعة من التشفير الموضعي في المُحوّلات:
+
+* **التشفير الموضعي الجيبي.** يعتمد على دوال الجيب وجيب التمام بترددات مختلفة لكل بُعد من أبعاد التضمين.
+
+* **تضمينات الموضع المُتعلّمة:** بدلاً من استخدام وظائف ساينوسية ثابتة، تكون تضمينات الموضع المتعلمة معاملات قابلة للتدريب ويتم تحسينها أثناء تدريب النموذج. يمكن لهذه التضمينات التقاط أنماط وتبعيات تعتمد على الموضع في المتوالية المدخلة.
+
+* **تشفير الموضع النسبي:** بالإضافة إلى المعلومات الموضعية المطلقة، يأخذ تشفير الموضع النسبي في اعتباره المسافات النسبية أو العلاقات بين الوحدات النصية. يمكن استخدامها لنمذجة التبعيات بين الوحدات النصية في مواضع مختلفة بطريقة صريحة.
+
+تعتمد اختيار الترميز الموضعي على المهمة المحددة وقاعدة البيانات وهندسة النموذج المستخدم. يُستخدم ترميز الموضع الساينوسي على نطاق واسع وأظهر أداءً جيدًا في مختلف النماذج المعتمدة على النماذج المحوَّلة. ومع ذلك، يمكن أن تكون التجارب على أنواع مختلفة من الترميز الموضعي مفيدة لتحسين قدرة النموذج على التقاط المعلومات الموضعية بفعالية.
+
+نتحقق من نهجين: **تضمينات الموضع المتعلمة** و**التشفير الموضعي الجيبي**. غالبًا ما لا يكون من الضروري استخدام طرق تشفير موضعية معقدة، فالتشفير الموضعي الجيبي القياسي المستخدم في النموذج الأصلي يعمل بشكل جيد.
+
 
 #### Sinusoidal positional encoding
 
@@ -346,7 +360,9 @@ The most commonly used method for positional encoding in transformers is the sin
     PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
     PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
 
-Where PE(pos, 2i) represents the i-th dimension of the positional encoding for the token at position "pos", and d_model is the dimensionality of the model.
+Where `PE(pos, 2i)` represents the `i-th` dimension of the positional encoding for the token at position `pos`, and `d_model` is the dimensionality of the model.
+
+الطريقة الأكثر استخدامًا لتشفير الموضع في المحولات هي التشفير الموضعي الساينوسي (الجيبي)، كما تم تقديمه في ورقة "الانتباه هو كل ما تحتاجه" بواسطة فاسواني وآخرون. يعتمد التشفير الموضعي الساينوسي على فكرة أنه يمكن تمثيل المواضع المختلفة باستخدام مجموعة من الدوال الجيبية والتكسيرية ذات الترددات المختلفة. تتمثل الصيغة الرسمية للتشفير الموضعي الساينوسي كما في المعادلة أعلاه، حيث يُمثل `PE(pos, 2i)` البُعد `i` للتشفير الموضعي للرمز في الموضع `pos`، و `d_model` هي بُعد النموذج.
 
 ```
 import tensorflow as tf
@@ -469,10 +485,16 @@ tf.Tensor(
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
 
+باستخدام التشفير الموضعي الجيبي، يمكن للنموذج التفريق بين الكلمات بناءً على مواقعها في تسلسل الإدخال. هذا يسمح للمحول بالتقاط المعلومات المتسلسلة والاهتمام بأجزاء مختلفة من التسلسل. من المهم ملاحظة أن التشفير الموضعي يُضاف كتمثيل ثابت ولا يتم تعلّمه أثناء عملية التدريب. يتعلم النموذج دمج المعلومات الموضعية من خلال آلية الانتباه والطبقات اللاحقة للمحول.
+
 #### Learned Positional Embeddings
 
-Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence.
-Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings or intermediate representations of the model.
+Learned positional embeddings refer to the practice of using trainable parameters to represent positional information in a sequence. In models such as Transformers, which operate on sequential data, positional embeddings play a crucial role in capturing the order and relative positions of elements in the sequence (but they do not explicitly capture the relative positions).
+Instead of relying solely on fixed positional encodings (e.g., sine or cosine functions), learned positional embeddings introduce additional trainable parameters that can adaptively capture the sequential patterns present in the data. These embeddings are typically added to the input embeddings.
+
+تشير التضمينات الموضعية المُتعلّمة إلى استخدام المعلمات القابلة للتدريب لتمثيل المعلومات الموضعية في تسلسل. في نماذج مثل المحوّلات، والتي تعمل على بيانات متسلسلة، تلعب التضمينات الموضعية دورًا مهمًا في التقاط الترتيب والمواضع النسبية للعناصر في التسلسل (لكنها لا تلتقط بوضوح المواضع النسبية).
+بدلاً من الاعتماد فقط على التشفيرات الموضعية الثابتة (دوال الجيب أو جيب التمام)، تُقدّم التضمينات الموضعية المُتعلّمة معلمات قابلة للتدريب يمكنها التقاط الأنماط المتسلسلة الموجودة في البيانات بشكل تكيفي. تضاف هذه التضمينات عادةً إلى التضمينات المدخلة كما في حالة دوال الجيب.
+
 ```
 import tensorflow as tf
 
@@ -562,11 +584,16 @@ tf.Tensor(
 ```
 
 By allowing the model to learn the positional representations, the learned positional embeddings enable the model to capture complex dependencies and patterns specific to the input sequence. The model can adapt its attention and computation based on the relative positions of the elements, which can be beneficial for tasks that require a strong understanding of the sequential nature of the data.
+
+ يُمكن من خلال السماح للنموذج بتعلم التمثيلات الموضعية، التقاط التبعيات والأنماط المعقدة الخاصة بتسلسل الإدخال. يمكن للنموذج تكييف انتباهه وحسابه بناءً على المواضع النسبية للعناصر، والتي يمكن أن تكون مفيدة للمهام التي تتطلب فهمًا قويًا للطبيعة المتسلسلة للبيانات.
+ 
 <br>
 <br>
 ### Embedding layer
 
 Now we are going to build the Embeddings layer. This layer will take `inputs_ids` and associate them with primitive representations and add positional information to them.
+
+الآن سنقوم ببناء طبقة التضمينات. ستأخذ هذه الطبقة *المُدخلات* وتربطها بالتمثيلات البدائية وتضيف إليها المعلومات الموضعية.
 
 ```
 import tensorflow as tf
@@ -701,11 +728,19 @@ tf.Tensor(
 
 Now we are done building the embedding layer!
 
-The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
+The encoder is composed of multiple encoder layers that are stacked together. Each encoder layer takes a sequence of embeddings as input and processes them through two sublayers: a `multi-head self-attention` layer and a `fully connected feed-forward` layer. The output embeddings from each encoder layer maintain the same size as the input embeddings. The primary purpose of the encoder stack is to modify the input embeddings in order to create representations that capture contextual information within the sequence in a hierarchical manner. For instance, if the words "keynote" or "phone" are in proximity to the word "apple," the encoder will adjust the embedding of "apple" to reflect more of a "company-like" context rather than a "fruit-like" one.
 
-Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the self-attention layer.
+Each of these sublayers also uses skip connections and layer normalization, which are standard tricks to train deep neural networks effectively. But to truly understand what makes a transformer work, we have to go deeper. Let’s start with the most important building block: the *self-attention* layer.
+
+الآن انتهينا من بناء طبقة التضمين!
+
+يتكون المشفر من طبقات تشفير متعددة مكدسة معًا. تأخذ كل طبقة تشفير سلسلة من التضمينات كمدخلات وتعالجها من خلال طبقتين فرعيتين: طبقة *الانتباه الذاتي متعدد الرؤوس* وطبقة *التغذية الأمامية المتصلة بالكامل*. تحافظ التضمينات الناتجة من كل طبقة تشفير على نفس حجم التضمينات المدخلة. الغرض الأساسي من تكديس طبقات التشفير هو تعديل عمليات التضمين المُدخلة من أجل إنشاء تمثيلات تلتقط المعلومات السياقية داخل التسلسل بطريقة هرمية. على سبيل المثال، إذا كانت الكلمات "keynote" أو "phone" قريبة من كلمة "apple"، فسيقوم  المُشفّر بتعديل تضمين "apple" ليعكس سياق "يشبه الشركة" بدلاً من سياق "يشبه الفاكهة".
+
+تستخدم كل طبقة من هذه الطبقات الفرعية أيضًا وصلات التخطي وتقييس الطبقة، وهي حيل قياسية لتدريب الشبكات العصبية العميقة بفعالية. ولكن لكي نفهم حقًا ما الذي يجعل المحولات تعمل، علينا أن نتعمق أكثر. لنبدأ بأهم لبنة: طبقة *الانتباه الذاتي*.
+
 <br>
 <br>
+
 ### Self-Attention
 
 Self-attention, also known as intra-attention, is a mechanism in the Transformer architecture that allows an input sequence to attend to other positions within itself. It is a key component of both the encoder and decoder modules in Transformers. In self-attention, each position in the input sequence generates three vectors: Query (Q), Key (K), and Value (V). These vectors are linear projections of the input embeddings. The self-attention mechanism then computes a weighted sum of the values (V) based on the similarity between the query (Q) and key (K) vectors. The weights are determined by the dot product between the query and key vectors, followed by an application of the softmax function to obtain the attention distribution. This attention distribution represents the importance or relevance of each position to the current position.
