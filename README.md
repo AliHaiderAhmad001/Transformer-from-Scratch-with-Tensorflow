@@ -36,22 +36,22 @@ The Transformer architecture is a popular model architecture used for various na
 
 The following figure shows encoder-decoder architecture of the transformer, with the encoder shown in the upper half of the figure and the decoder in the lower half. It is worth saying that this figure represents the the "inference phase". Here it should be noted that the decoder’s mechanism in the inference phase is slightly different in the training phase, and we will understand that later.
 
-يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي. تجدر الإشارة إلا أن هذا الشكل يمثل "مرحلة الاستدلال". هنا تجدر الإشارة إلى أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً في مرحلة التدريب، وسنفهم ذلك لاحقًا.
+يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي. تجدر الإشارة إلا أن هذا الشكل يمثل "مرحلة الاستدلال"، حيث أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً عن مرحلة التدريب، وسنفهم ذلك لاحقًا عند مناقشة مرحلة التدريب والاستدلال.
 <br>
 <br>
 ![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
 <br>
 <br>
 
-We’ll look at each of the components in detail shortly, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence (EOS) token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and "Zeit". Now it gets these two as an input as well as all the encoder's outputs to predict the next token, "fliegt". In the next step the decoder gets "fliegt" as an additional input. We repeat the process until the decoder predicts the EOS token or we reached a maximum length. Here are the steps to build an English to French translation model using the Transformers architecture:
+We’ll look at each of this components in details later, but we can already see a few things in Figure above that characterize the Transformer architecture. The input text is tokenized and converted to token embeddings. Since the attention mechanism is not aware of the relative positions of the tokens, we need a way to inject some information about token positions into the input to model the sequential nature of text. The token embeddings are thus combined with positional embeddings that contain positional information for each token. The encoder is composed of a stack of encoder layers or "blocks", which is analogous to stacking convolutional layers in computer vision. The same is true of the decoder, which has its own stack of decoder layers. The encoder's output is fed to each decoder layer, and the decoder then generates a prediction for the most probable next token in the sequence. The output of this step is then fed back into the decoder to generate the next token, and so on until a special end-of-sequence *EOS* token is reached. In the example from Figure above, imagine the decoder has already predicted "Die" and *Zeit*. Now it gets these two as an input as well as all the encoder's outputs to predict the next token, *fliegt*. In the next step the decoder gets *fliegt* as an additional input. We repeat the process until the decoder predicts the *EOS* token or we reached a maximum length. Here are the steps to build an English to French translation model using the Transformers architecture:
 
 
-نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات CNN، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة EOS. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة "Die" وكلمة "Zeit". الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي "fliegt". في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS. فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
+نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات *CNN*، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة *EOS*. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة *Die* وكلمة *Zeit*. الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي *fliegt*. في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS. فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
 
 
 ## Data preparation
 
-We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french):
+We'll be working with an [English-to-French translation dataset](https://ankiweb.net/shared/decks/french) (مجموعة البيانات التي سنعمل معها):
 
 ```
 import pathlib
@@ -65,7 +65,9 @@ text_file = pathlib.Path(text_file).parent/"fra.txt"
 print(text_file) # /root/.keras/datasets/fra.txt
 ```
 
-The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French). Now, normalize dataset (French and English sentence) then prepend the token "[start]" and append the token "[end]" to the French sentence:
+The dataset we're working on consists of 167,130 lines. Each line consists of the original sequence (the sentence in English) and the target sequence (in French). Now, normalize dataset (French and English sentence) then prepend the token `[start]` and append the token `[end]` to the French sentence:
+
+تتكون مجموعة البيانات التي نعمل عليها من 167130 سطرًا. يتكون كل سطر من التسلسل الأصلي (الجملة باللغة الإنجليزية) والتسلسل المستهدف (بالفرنسية). نُجري الآن تقييّسًا لمجموعة البيانات (الجملة الفرنسية والإنجليزية) ثم نُرفق الوحدة النصية المُخصّصة `[start]` في البداية والوحدة النصية المُخصّصة `[end]` في النهاية للجمل الفرنسية فقط:
 
 ```
 import pathlib
@@ -121,12 +123,14 @@ Numper of token in english sequences: 14969
 Numper of token in french sequences: 29219
 ```
     
-Now, we need to write a function that associates each token with a unique integer number representing it to get what is called a "Tokens_IDs". Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization layer to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
+Now, we need to write a function that associates each token with a unique integer number representing it to get what is called a *Tokens_IDs*. Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
+
+ نحتاج الآن إلى كتابة دالة تربط كل وحدة نصية برقم صحيح فريد يمثلها للحصول على ما يسمى *Tokens_IDs*. لحسن الحظ هناك طبقة في TensorFlow تسمى [`TextVectorization`] (https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) تجعل الأمور أسهل بالنسبة لنا. سنستخدم كائنين من `TextVectorization` لتوجيه (التحويل لمصفوفات) البيانات النصية (أحدهما للغة الإنجليزية والآخر للغة الإسبانية). بدايةً نقسم أزواج الجمل إلى مجموعة تدريب ومجموعة مراقبة ومجموعة اختبار:
 
 ```
 random.shuffle(text_pairs)
 max_len = max([max([len(x[0].split()), len(x[1].split())]) for x in text_pairs])
-num_val_samples = int(0.15 * len(text_pairs))
+num_val_samples = int(0.15 * len(text_pairs)) # 15% 
 num_train_samples = len(text_pairs) - 2 * num_val_samples
 train_pairs = text_pairs[:num_train_samples]
 val_pairs = text_pairs[num_train_samples : num_train_samples + num_val_samples]
@@ -148,7 +152,7 @@ Output:
 25069 test pairs
 ```
     
-Now we'll do Vectorization:
+Now we'll do Vectorization (نطبق عملية التوجيه):
 
 ```
 from tensorflow.keras.layers import TextVectorization
@@ -182,7 +186,8 @@ eng_vectorizer.adapt(train_eng_texts)
 fra_vectorizer.adapt(train_fra_texts)
 ```
 
-Now we can save what we do for the subsequent steps:
+Now we can save what we do for the subsequent steps (Optional):
+يمكنك حفظ العمل الذي قمت به حتى الآن كما يلي (اختياري):
 
 ```
 with open("vectorize.pickle", "wb") as fp:
@@ -198,7 +203,7 @@ with open("vectorize.pickle", "wb") as fp:
     pickle.dump(data, fp)
 ```
 
-We can open the files again using:
+We can open the files again using (فتح الملفات مرة أخرى باستخدام):
 ```
 with open("vectorize.pickle", "rb") as fp:
     data = pickle.load(fp)
@@ -224,6 +229,18 @@ Now we have to define how we will pass the data to the model. There are several 
     * [You can read more here](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
     * [ِAnd here](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517).
 
+
+الآن علينا تحديد كيف سنقوم بتمرير البيانات إلى النموذج. هناك عدة طرق للقيام بذلك:
+* تقديم البيانات كمصفوفة NumPy أو Tensor (أسرع ولكن يجب تحميل جميع البيانات في الذاكرة -عبء-).
+* إنشاء دالة توليّد والسماح لحلقة بقراءة البيانات منها (يمكن استرجاعها من القرص الثابت عند الحاجة، بدلاً من تحميلها جميعًا في الذاكرة).
+* استخدام `tf.data` (اختيارنا). تتمثل المزايا العامة لاستخدام `tf.data` في المرونة في التعامل مع البيانات وجعل إمداد البيانات إلى النموذج أكثر كفاءة وسرعة. ولكن ما هي `tf.data` (باختصار)؟ `tf.data` هو وحدة برمجية في تنسرفلو توفر أدواتًا لبناء أنابيب إدخال فعاّلة وقابلة للتوسع لنماذج التعلم الآلي. تم تصميمها للتعامل مع مجموعات البيانات الكبيرة، وتيسير معالجة البيانات، وتمكين استيعاب البيانات مع أداء عالي في التدريب والتقييم (يشير استيعاب البيانات إلى عملية التحميل والمعالجة المسبقة وتغذية البيانات في النموذج). يمكنك باستخدام `tf.data` بناء أنابيب إدخال فعّالة وقابلة للتوسع لتدريب نماذج التعلم العميق. فيما يلي بعض الدوال الهامة:
+   * الدالة `shuffle(n)`: يقوم عشوائيًا بملء مخزن مؤقت بـ `n` عينة بيانات ويعمل على خلط البيانات في المخزن.
+   * الدالة `batch(n)`: يولد دُفعات من مجموعة البيانات، كل منها بحجم n.
+   * الدالة `prefetch(n)`: للاحتفاظ ب n دُفعات/عناصر جاهزة في الذاكرة تمهيدًا لاستهلاكها في التكرار التالي لعملية التدريب.
+   * الدالة `cache`: يقوم بتخبئة البيانات بكفاءة لتسريع القراءة في المرات التالية (اعتقد أنها تحاول عدم تكرار نفس عمليات المعالجة في كل مرة، أي تجعلها تُطبّق مرة واحدة).
+   * الدالة `map(func)`: تطبيق تحويل (دالة) على البيانات.
+  * [اقرأ أكثر](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
+  * [ِوهنا أيضًا](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517).
 ```
 from tensorflow.data import AUTOTUNE
 
