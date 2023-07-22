@@ -590,6 +590,7 @@ By allowing the model to learn the positional representations, the learned posit
  
 <br>
 <br>
+
 ### Embedding layer
 
 Now we are going to build the Embeddings layer. This layer will take `inputs_ids` and associate them with primitive representations and add positional information to them.
@@ -838,6 +839,7 @@ We’ve initialized three independent linear layers that apply matrix multiplica
 
 <br>
 <br>
+
 ### Multi-headed attention
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
@@ -845,7 +847,7 @@ By introducing multiple attention heads, the model gains the ability to simultan
 من خلال تقديم رؤوس انتباه متعددة، يكتسب النموذج القدرة على التركيز في وقت واحد على جوانب متعددة. على سبيل المثال، يمكن لرأس واحد أن يفهم تفاعلات الفاعل والفعل، بينما يمكن لرأس آخر تحديد الصفات المُجاورة. يُمكّن النهج متعدد الرؤوس النموذج من التقاط نطاق أوسع من العلاقات الدلالية ضمن التسلسل، مما يعزز قدراته في الفهم والتمثيل. الآن بعد أن أصبح لدينا رأس انتباه واحد، يمكننا وصل مخرجات عدة رؤوس لتحقيق طبقة الانتباه متعددة الرؤوس الكاملة (كل رأس انتباه يُعطي 64 بُعد، فيتم وصلها لإعادة تشكيل أبعاد التضمين الأصلية 768):
 
 ```
-class MultiHeadAttention(tf.keras.layers.Layer):
+class MultiHead_Attention(tf.keras.layers.Layer):
     """
     Multi-head attention layer implementation.
 
@@ -936,7 +938,7 @@ input_ids = tf.constant([[2, 2, 0, 0]])
 x = Embeddings_layer(input_ids)
 
 # Apply MultiHeadAttention
-multihead_attn = MultiHeadAttention(config)
+multihead_attn = MultiHead_Attention(config)
 x = multihead_attn(x, x, x)
 
 print("Outputs:")
@@ -1020,6 +1022,7 @@ It is important to note that when using a feed-forward layer like `dense`, it is
 **Adding Layer Normalization.** When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
 <br>
 <br>
+
 ### Encoder layer
 
 Now that we've built all the main parts of the encoder layer, we'll put them together to build it:
@@ -1043,7 +1046,7 @@ class Encoder(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.supports_masking = True
-        self.multihead_attention = MultiHeadAttention(config)
+        self.multihead_attention = MultiHead_Attention(config)
         self.norm1 = tf.keras.layers.LayerNormalization()
         self.norm2 = tf.keras.layers.LayerNormalization()
         self.feed_forward = FeedForward(config)
@@ -1118,7 +1121,7 @@ input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_l
 # Apply Embeddings_layer
 x = Embeddings_layer(input_ids)
 
-# Apply MultiHeadAttention
+# Apply Encoder
 encoder = Encoder(config)
 x = encoder(x)
 
@@ -1215,8 +1218,8 @@ class Decoder(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         self.supports_masking = True
-        self.masked_multihead_attention = MultiHeadAttention(config)
-        self.multihead_attention = MultiHeadAttention(config)
+        self.masked_multihead_attention = MultiHead_Attention(config)
+        self.multihead_attention = MultiHead_Attention(config)
         self.norm1 = tf.keras.layers.LayerNormalization()
         self.norm2 = tf.keras.layers.LayerNormalization()
         self.norm3 = tf.keras.layers.LayerNormalization()
@@ -1353,6 +1356,7 @@ Now we have finished building the main components of the model!
 <br>
 
 ### Transformer Model
+
 Now, after we have built the necessary ingredients, and tested them. We can build in safety our transformer model.
 
 ```
@@ -1377,6 +1381,7 @@ class Transformer(tf.keras.Model):
 
     Methods:
         call: Forward pass of the transformer model.
+        get_config: Returns the configuration dictionary of the transformer model.
     """
 
     def __init__(self, config, source_vocab_size, target_vocab_size):
@@ -1386,7 +1391,7 @@ class Transformer(tf.keras.Model):
         self.encoder = [Encoder(config) for _ in range(config.num_layers)]
         self.decoder = [Decoder(config) for _ in range(config.num_layers)]
         self.dropout = tf.keras.layers.Dropout(config.final_dropout_prob)
-        self.output_layer = tf.keras.layers.Dense(config.vocab_size)
+        self.output_layer = tf.keras.layers.Dense(target_vocab_size)
 
     def call(self, inputs, training=False):
         """
@@ -1403,7 +1408,6 @@ class Transformer(tf.keras.Model):
         target_inputs = inputs["decoder_inputs"]
 
         x_enc = self.enc_embed_layer(source_inputs)
-
         x_dec = self.dec_embed_layer(target_inputs)
 
         for encoder_layer in self.encoder:
@@ -1422,9 +1426,21 @@ class Transformer(tf.keras.Model):
         x_logits._keras_mask = None
 
         return x_logits
+
+    def get_config(self):
+        """
+        Returns the configuration dictionary of the transformer model.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = super(Transformer, self).get_config()
+        # Add custom configurations to the dictionary if needed
+        return config
 ```
 
 All are done, Let's go train our model!
+
 <br>
 <br>
 
@@ -1545,25 +1561,32 @@ Next, we are required to specify the loss function for the training process. In 
 ```
 import tensorflow as tf
 
-def scce_loss_func(label, pred):
+def scce_masked_loss(label, pred):
     """
-    Computes the masked loss between the predicted and target labels.
+    Computes the masked Sparse Categorical Cross Entropy (SCCE) loss between the predicted and target labels.
 
     Args:
         label: Target label tensor.
-        pred: Predicted label tensor.
+        pred: Predicted logit tensor.
 
     Returns:
         Masked loss value.
     """
+    # Create a mask to ignore padded tokens
     mask = label != 0
 
-    scc_loss = tf.keras.losses.SparseCategoricalCrossentropy(
+    # Use Sparse Categorical Cross Entropy loss with no reduction
+    loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none')
-    loss = scc_loss(label, pred)
 
+    # Compute the loss without reducing, which will return a loss value for each token
+    loss = loss_object(label, pred)
+
+    # Apply the mask to ignore padded tokens in the loss calculation
     mask = tf.cast(mask, dtype=loss.dtype)
     loss *= mask
+
+    # Compute the average loss over non-padded tokens
     loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
     return loss
 ```
@@ -1575,14 +1598,35 @@ When we are getting talking about loss function, we must refer to the *Label Smo
 ```
 import tensorflow as tf
 
-def cce_loss_func(label, pred):
+def cce_loss(label, pred):
+    """
+    Computes the Categorical Cross Entropy (CCE) loss with optional label smoothing.
+
+    Args:
+        label: Target label tensor.
+        pred: Predicted logit tensor.
+
+    Returns:
+        Computed CCE loss value.
+    """
+    # Create a mask to ignore padded tokens
     mask = label != 0
+
+    # Use Categorical Cross Entropy with optional label smoothing
     scc_loss = tf.keras.losses.CategoricalCrossentropy(
-        from_logits=True, label_smoothing=0.0, reduction='none')
-    label = tf.one_hot(tf.cast(label, tf.int32), 3)
-    loss = cc_loss(label, pred)
+        from_logits=True, label_smoothing=0.1, reduction='none')
+
+    # Convert label to one-hot encoding
+    label = tf.one_hot(tf.cast(label, tf.int32), config.target_vocab_size)
+
+    # Compute the loss with the label smoothing
+    loss = scc_loss(label, pred)
+
+    # Apply the mask to ignore padded tokens in the loss calculation
     mask = tf.cast(mask, dtype=loss.dtype)
     loss *= mask
+
+    # Compute the average loss over non-padded tokens
     loss = tf.reduce_sum(loss) / tf.reduce_sum(mask)
     return loss
 ```
@@ -1592,6 +1636,8 @@ def cce_loss_func(label, pred):
 It's common to use masked accuracy with this task, so let's implement it:
 
 ```
+import tensorflow as tf
+
 def masked_accuracy(label, pred):
     """
     Computes the masked accuracy between the predicted and target labels.
@@ -1603,16 +1649,26 @@ def masked_accuracy(label, pred):
     Returns:
         Masked accuracy value.
     """
-    pred = tf.argmax(pred, axis=2)
-    label = tf.cast(label, pred.dtype)
-    match = label == pred
+    # Get the predicted labels by taking the argmax along the last dimension
+    pred_labels = tf.argmax(pred, axis=2)
 
+    # Convert the target labels to the same data type as the predicted labels
+    label = tf.cast(label, pred_labels.dtype)
+
+    # Compute a binary tensor for matching predicted and target labels
+    match = label == pred_labels
+
+    # Create a mask to ignore padded tokens
     mask = label != 0
 
+    # Apply the mask to the matching tensor
     match = match & mask
 
+    # Convert the binary tensor to floating-point values
     match = tf.cast(match, dtype=tf.float32)
     mask = tf.cast(mask, dtype=tf.float32)
+
+    # Compute the accuracy over non-padded tokens
     return tf.reduce_sum(match) / tf.reduce_sum(mask)
 ```
 
@@ -1642,6 +1698,16 @@ import numpy as np
 from collections import Counter
 
 def compute_precision(candidate_ngrams, reference_ngrams):
+    """
+    Compute the precision of candidate n-grams with respect to reference n-grams.
+
+    Args:
+        candidate_ngrams: List of tuples representing candidate n-grams.
+        reference_ngrams: List of tuples representing reference n-grams.
+
+    Returns:
+        Precision value.
+    """
     candidate_counter = Counter(candidate_ngrams)
     reference_counter = Counter(reference_ngrams)
 
@@ -1657,6 +1723,18 @@ def compute_precision(candidate_ngrams, reference_ngrams):
     return precision
 
 def compute_bleu_batch(references_batch, candidates_batch, max_n=4):
+    """
+    Compute the masked BLEU score for a batch of sentences.
+
+    Args:
+        label: Target label tensor.
+        pred: Predicted tensor.
+        max_n: Maximum n-gram for BLEU computation.
+
+    Returns:
+        Computed masked BLEU score.
+    """
+
     batch_size = len(references_batch)
     total_bleu_score = 0.0
 
@@ -1697,13 +1775,13 @@ def compute_bleu_batch(references_batch, candidates_batch, max_n=4):
     # Calculate the average BLEU score over the entire batch
     average_bleu_score = total_bleu_score / batch_size
 
-    return average_bleu_score[0]
+    return average_bleu_score
 
 # Example usage with batch of sentences
-references_batch = [["the quick brown fox jumped over the lazy dog"], ["the quick brown fox jumped over the lazy dog"]]
-candidates_batch = [["the quick brown fox jumped over the lazy dog from space"], ["the quick brown fox jumped over the"]]
+references_batch = [["the quick brown fox jumped over the lazy dog"]]
+candidates_batch = [["the quick brown fox jumped over the lazy dog from space"]]
 bleu_score_batch = compute_bleu_batch(references_batch, candidates_batch)
-print("Average BLEU Score:", bleu_score_batch) # Average BLEU Score: [0.7687763]
+print("Average BLEU Score:", bleu_score_batch)  # Output: 0.78
 ```
 
 However, it also has some limitations, such as sensitivity to sentence length and the fact that it relies solely on n-gram matching without considering semantic meaning. As a result, researchers often use multiple evaluation metrics, including BLEU, to get a more comprehensive understanding of the translation system's performance.
@@ -1712,11 +1790,33 @@ However, it also has some limitations, such as sensitivity to sentence length an
 
 <br>
 <br>
+
 ### Training the Transformer
 
 ```
+import tensorflow as tf
+
 class Config:
     def __init__(self):
+        """
+        Configuration class for transformer model hyperparameters.
+
+        Attributes:
+            sequence_length: Maximum sequence length for input sequences.
+            hidden_size: Hidden size for the transformer model.
+            frequency_factor: Frequency factor for positional encodings.
+            source_vocab_size: Vocabulary size for the source language.
+            target_vocab_size: Vocabulary size for the target language.
+            positional_information_type: Type of positional embeddings to use.
+            hidden_dropout_prob: Dropout probability for the hidden layers.
+            num_heads: Number of attention heads in multi-head attention.
+            intermediate_fc_size: Size of the intermediate fully connected layer.
+            warmup_steps: Number of warm-up steps for learning rate scheduling.
+            num_layers: Number of encoder and decoder layers in the transformer.
+            final_dropout_prob: Dropout probability for the final output.
+            epochs: Number of epochs for training.
+            checkpoint_filepath: Filepath for saving model checkpoints.
+        """
         self.sequence_length = 60
         self.hidden_size = 256
         self.frequency_factor = 10000
@@ -1734,27 +1834,42 @@ class Config:
 
 config = Config()
 
-transformer = Transformer(config, self.source_vocab_size, self.target_vocab_size)
+transformer = Transformer(config, config.source_vocab_size, config.target_vocab_size)
 
 lr = LrSchedule(config)
 
-early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+early_stopping = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss',
     mode='min',
-    patience=4)
+    patience=4
+)
 
-model_checkpoint= tf.keras.callbacks.ModelCheckpoint(
+model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
     filepath=config.checkpoint_filepath,
     monitor='val_loss',
     mode='min',
-    save_best_only=True)
+    save_best_only=True
+)
 
-optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-transformer.compile(loss=cce_loss,
-                    optimizer=optimizer,
-                    metrics=[masked_accuracy])
+optimizer = tf.keras.optimizers.Adam(
+    lr,
+    beta_1=0.9,
+    beta_2=0.98,
+    epsilon=1e-9
+)
 
-history = transformer.fit(train_ds, epochs=config.epochs, validation_data=val_ds,
-                          callbacks=[early_stopping, model_checkpoint])
+transformer.compile(
+    loss=cce_loss,
+    optimizer=optimizer,
+    metrics=[masked_accuracy]
+)
+
+history = transformer.fit(
+    train_ds,
+    epochs=config.epochs,
+    validation_data=val_ds,
+    callbacks=[early_stopping, model_checkpoint]
+)
 ```
 
 ## Inference
