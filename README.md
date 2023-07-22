@@ -6,6 +6,7 @@ The task of translating text from one language into another is a common task. In
 <br>
 <br>
 <br>
+
 ## Transformer architecture
 
 The Transformer architecture is a popular model architecture used for various natural language processing tasks, including machine translation, text generation, and language understanding. It was introduced by Vaswani et al. in the paper "Attention Is All You Need". The Transformer architecture consists of two main components: the encoder and the decoder. Both the encoder and decoder are composed of multiple layers of self-attention and feed-forward neural networks. The key idea behind the Transformer is the use of self-attention mechanisms, which allow the model to focus on different parts of the input sequence when generating the output. In the following figure a high-level overview of the Transformer architecture.
@@ -752,6 +753,16 @@ The weighted sum of values, weighted by the attention distribution, is the outpu
 3. To ensure stability during training, the attention scores are scaled by a factor to normalize their variance. Then, a softmax function is applied to normalize the column values, ensuring they sum up to 1. This produces the attention weights, which also form an n × n matrix.
 4. The token embeddings are updated by multiplying them with their corresponding attention weights and summing the results. This process generates an updated representation for each embedding, taking into account the importance assigned to each token by the attention mechanism.
 
+
+الانتباه الذاتي، المعروف أيضًا باسم الانتباه الداخلي، هو آلية في بنية المحولات تسمح للوحدات النصية في سلسلة الإدخال -بالاطلاع على الوحدات النصية الأخرى التي تجاورها. إنّه مكون رئيسي لكل من وحدات التشفير وفك التشفير في المحولات. في الانتباه الذاتي، يكون لكل وحدة نصية في تسلسل الإدخال ثلاثة متجهات: الاستعلام (Q) والمفتاح (K) والقيمة (V). هذه المتجهات هي إسقاطات خطية للتضمينات المُدخلة. تحسب آلية الانتباه الذاتي بعد ذلك المجموع الموزون للقيم (V) بناءً على التشابه بين متجهات الاستعلام (Q) والمتجهات المفتاحية (K). يتم تحديد الأوزان بواسطة الجداء النقطي بين الاستعلام والمفتاح، متبوعًا بتطبيق دالة softmax للحصول على توزيع الانتباه. يمثل توزيع الانتباه هذا أهمية أو صلة كل وحدة نصية بالأخرى.
+
+المجموع الموزون للقيم، الموزون من خلال قيم توزيع الانتباه، هو ناتج طبقة الانتباه الذاتي. يلتقط هذا الخرج التمثيل السياقي لتسلسل الإدخال من خلال النظر في العلاقات والتبعيات بين المواضع أو الوحدات النصية المختلفة. تتيح آلية الانتباه الذاتي لكل موضع برؤية جميع المواضع الأخرى، مما يمكّن النموذج من التقاط التبعيات بعيدة المدى والمعلومات السياقية بشكل فعال. يتم استخدام أحد التطبيقات الشائعة للانتباه الذاتي، والمعروف باسم **اانتباه الجداء النقطي الموزون**، على نطاق واسع وتم وصفه في ورقة فاسواني. يتضمن هذا النهج عدة خطوات لحساب درجات الانتباه وتحديث التضمينات:
+
+1. يتم عمل ثلاث إسقاطات خطية لتضمينات الوحدات النصية للحصول على ثلاثة متجهات: الاستعلام والمفتاح والقيمة.
+2. يتم حساب درجات الانتباه عن طريق قياس التشابه بين الاستعلام والمفتاح باستخدام الجداء النقطي. يتم تحقيق ذلك بكفاءة من خلال ضرب المصفوفات. تشير قيم الجداء النقطي الأعلى إلى علاقات أقوى بين الاستعلام والمفتاح، بينما تشير القيم المنخفضة إلى تشابه أقل. تشكل درجات الانتباه الناتجة مصفوفة n × n، حيث تمثل n عدد الوحدات النصية الفريدة الموجودة في الدخل.
+3. لضمان الاستقرار أثناء التدريب، يتم تحجيم درجات الانتباه بعامل تقييس لتباينها. بعد ذلك، يتم تطبيق دالة softmax للحصول على توزيع الانتباه. ينتج عن ذلك أوزان الانتباه، والتي تشكل أيضًا مصفوفة n × n.
+4. يتم تحديث التضمينات للوحدات النصية (تمثيلات الكلمات) بضربها مع أوزان الانتباه المقابلة لها وجمع النتائج. تنشئ هذه العملية تمثيلاً مُحدّثًا لكل تضمين، مع الأخذ في الاعتبار أهمية كل كلمة بالنسبة للأخرى من خلال آلية الانتباه.
+
 ```
 class AttentionHead(tf.keras.layers.Layer):
     """
@@ -820,14 +831,18 @@ class AttentionHead(tf.keras.layers.Layer):
         return config
 ```
 
-We’ve initialized three independent linear layers that apply matrix multiplication to the embedding vectors to produce tensors of shape *[batch_size, seq_len, head_dim]*, where `head_dim` is the number of dimensions we are projecting into. Although `head_dim` does not have to be smaller than the number of embedding dimensions of the tokens (`embed_dim`), in practice it is chosen to be a multiple of `embed_dim` so that the computation across each head is constant. For example, BERT has *12* attention heads, so the dimension of each head is *768/12 = 64*.
+We’ve initialized three independent linear layers that apply matrix multiplication to the embedding vectors to produce tensors of shape *[batch_size, seq_len, head_dim]*, where `head_dim` is the number of dimensions we are projecting into. In practically, `head_dim` be smaller than the number of embedding dimensions of the tokens (`embed_dim`), in practice it is chosen to be a multiple of `embed_dim` so that the computation across each head is constant. For example, BERT has *12* attention heads, so the dimension of each head is *768/12=64*. There is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity. Having multiple heads provides a form of redundancy. If one head fails to learn the correct attention pattern, other heads can still capture the relevant information. This redundancy can improve the robustness of the model and reduce overfitting. Another advantage is that attention heads operate independently, allowing for parallelization during training and inference, which speeds up computations.
 
-There is a clear advantage to incorporating multiple sets of linear projections, each representing an attention head. But why is it necessary to have more than one attention head? The reason is that when using just a single head, the softmax tends to focus primarily on one aspect of similarity.
+
+لقد قمنا بتهيئة ثلاث طبقات خطية مستقلة لتطبيق عمليات الضرب المصفوفية على متجهات التضمين لإنتاج موترات من الشكل *[batch_size، seq_len، head_dim]* ، حيث `head_dim` هو عدد الأبعاد التي نُسقط إليها. في الممارسات العملية تكون `head_dim` أصغر من عدد أبعاد التضمين `embed_dim`، ويتم اختياره ليكون من مضاعفات `embed_dim` بحيث يكون حجم كل رأس ثابتًا. على سبيل المثال، يحتوي BERT على رؤوس انتباه *12*، وبالتالي فإن بُعد كل رأس هو *768/12=64*. من الواضح أن الدمج بين مجموعات متعددة من الإسقاطات الخطية، بحيث كل منها يُمثل رأس انتباه. لكن لماذا من الضروري أن يكون لديك أكثر من رأس انتباه؟ والسبب هو أنه عند استخدام رأس واحد فقط، يميل softmax إلى التركيز على جانب واحد من أوجه التشابه. كما أن وجود عدة رؤوس يوفر شكلاً من أشكال التكرار. إذا فشل رأس واحد في تعلم نمط الانتباه الصحيح، فلا يزال بإمكان الرؤوس الآخرى التقاط المعلومات ذات الصلة. يمكن أن يؤدي هذا التكرار إلى تحسين متانة النموذج وتقليل الضبط المُفرط. ميزة أخرى هي أن رؤوس الانتباه تعمل بشكل مستقل، مما يسمح بالتوازي أثناء التدريب والاستدلال، مما يؤدي إلى تسريع العمليات الحسابية.
+
 <br>
 <br>
 ### Multi-headed attention
 
 By introducing multiple attention heads, the model gains the ability to simultaneously focus on multiple aspects. For instance, one head can attend to subject-verb interactions, while another head can identify nearby adjectives. This multi-head approach empowers the model to capture a broader range of semantic relationships within the sequence, enhancing its understanding and representation capabilities. Now that we have a single attention head, we can concatenate the outputs of each one to implement the full multi-head attention layer:
+
+من خلال تقديم رؤوس انتباه متعددة، يكتسب النموذج القدرة على التركيز في وقت واحد على جوانب متعددة. على سبيل المثال، يمكن لرأس واحد أن يفهم تفاعلات الفاعل والفعل، بينما يمكن لرأس آخر تحديد الصفات المُجاورة. يُمكّن النهج متعدد الرؤوس النموذج من التقاط نطاق أوسع من العلاقات الدلالية ضمن التسلسل، مما يعزز قدراته في الفهم والتمثيل. الآن بعد أن أصبح لدينا رأس انتباه واحد، يمكننا وصل مخرجات عدة رؤوس لتحقيق طبقة الانتباه متعددة الرؤوس الكاملة (كل رأس انتباه يُعطي 64 بُعد، فيتم وصلها لإعادة تشكيل أبعاد التضمين الأصلية 768):
 
 ```
 class MultiHeadAttention(tf.keras.layers.Layer):
@@ -891,7 +906,9 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         return config
 ```
 
-Notice that the concatenated output from the attention heads is also fed through a final linear layer to produce an output tensor of shape [batch_size, seq_len, hidden_dim] that is suitable for the feed-forward network downstream.
+Notice that the concatenated output from the attention heads is also fed through a final linear layer to produce an output tensor of shape *[batch_size, seq_len, hidden_dim]* that is suitable for the feed-forward network downstream.
+
+لاحظ أن الخرج الموصول من رؤوس الانتباه يتم تمريره إلى طبقة خطية أخيرة لإنتاج موتر بالشكل *[batch_size, seq_len, hidden_dim]* مناسب لشبكة التغذية الأمامية النهائية.
 
 Testing:
 ```
@@ -935,11 +952,14 @@ tf.Tensor(
 ```
 <br>
 <br>
+
 ### The Feed-Forward Layer and Normalization
 
-The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**.
+The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**. In the literature, a general guideline suggests setting the hidden size of the first layer to be four times the size of the embeddings. Additionally, a GELU activation function is commonly used in this layer. It is believed that this particular sublayer contributes significantly to the model's capacity and memorization abilities. Consequently, when scaling up the models, this layer is often a focal point for adjustment and expansion.
 
-In the literature, a general guideline suggests setting the hidden size of the first layer to be four times the size of the embeddings. Additionally, a GELU activation function is commonly used in this layer. It is believed that this particular sublayer contributes significantly to the model's capacity and memorization abilities. Consequently, when scaling up the models, this layer is often a focal point for adjustment and expansion.
+يمكن وصف الطبقة الفرعية للتغذية الأمامية في كل من وحدات التشفير وفك التشفير على أنها شبكة عصبية بسيطة من طبقتين متصلتين بالكامل. ومع ذلك، فإن عملها يختلف عن الشبكة القياسية من حيث أنه يتعامل مع كل تضمين في التسلسل بشكل مستقل بدلاً من معالجة التسلسل بأكمله كمتجه واحد. بسبب هذه الخاصية، يُشار إليها غالبًا باسم ** طبقة تغذية أمامية موضع بموضع**. في الأدبيات (المراجع العلمية)، يقترح النهج العام تحديد حجم للطبقة الأولى ليكون أربعة أضعاف حجم التضمينات. بالإضافة إلى ذلك، يتم استخدام دالة تنشيط GELU بشكل شائع في هذه الطبقة. من المُعتقد أن هذه الطبقة الفرعية تساهم بشكل كبير في سعة استيعاب النموذج للمعلومات وقدراته على الحفظ. وبالتالي، عند توسيع نطاق النماذج، غالبًا ما تكون هذه الطبقة نقطة محورية للضبط والتوسيع.
+
+
     
 ```
 class FeedForward(tf.keras.layers.Layer):
@@ -1120,8 +1140,10 @@ tf.Tensor(
 ```
 
 We’ve now implemented our first transformer encoder layer from scratch!
+
 <br>
 <br>
+
 ### Decoder
 
 The main difference between the decoder and encoder is that the decoder has two attention sublayers:
@@ -1326,8 +1348,10 @@ tf.Tensor(
 ```
 
 Now we have finished building the main components of the model!
+
 <br>
 <br>
+
 ### Transformer Model
 Now, after we have built the necessary ingredients, and tested them. We can build in safety our transformer model.
 
