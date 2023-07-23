@@ -1791,11 +1791,60 @@ However, it also has some limitations, such as sensitivity to sentence length an
 <br>
 <br>
 
-### Training the Transformer
+### Callbacks
 
 ```
 import tensorflow as tf
 
+class TransformerCallbacks(tf.keras.callbacks.Callback):
+    """
+    Custom callback to monitor the validation loss during training and save the best model.
+
+    Args:
+        config: Configuration object containing hyperparameters.
+
+    Attributes:
+        checkpoint_filepath: Filepath to save the best model.
+        patience: Number of epochs to wait for improvement in validation loss.
+        best_loss: Best validation loss observed during training.
+
+    Methods:
+        on_epoch_end: Called at the end of each epoch to monitor the validation loss.
+
+    """
+
+    def __init__(self, config):
+        super(TransformerCallbacks, self).__init__()
+        self.checkpoint_filepath = config.checkpoint_filepath
+        self.patience = config.patience
+        self.best_loss = float('inf')  # Initialize with a very large value for the first comparison
+
+    def on_epoch_end(self, epoch, logs={}):
+        """
+        Callback function called at the end of each epoch to monitor the validation loss.
+
+        Args:
+            epoch: The current epoch number.
+            logs: Dictionary containing training and validation metrics.
+
+        """
+        # Access the validation loss from the logs dictionary
+        val_loss = logs.get('val_loss')
+
+        if val_loss < self.best_loss:
+            self.best_loss = val_loss
+            self.model.save_weights(self.checkpoint_filepath+'/'+'eng-fra-transformer.h5')
+            print('The best model has been saved at epoch #{}'.format(epoch))
+        elif self.patience:
+            self.patience -= 1
+            if self.patience == 0:
+                self.model.stop_training = True
+                print('Training stopped. No improvement after {} epochs.'.format(epoch))
+```
+
+### Transformer Configuration
+
+```
 class Config:
     def __init__(self):
         """
@@ -1812,10 +1861,12 @@ class Config:
             num_heads: Number of attention heads in multi-head attention.
             intermediate_fc_size: Size of the intermediate fully connected layer.
             warmup_steps: Number of warm-up steps for learning rate scheduling.
-            num_layers: Number of encoder and decoder layers in the transformer.
+            num_blocks: Number of encoder and decoder blocks in the transformer.
             final_dropout_prob: Dropout probability for the final output.
             epochs: Number of epochs for training.
             checkpoint_filepath: Filepath for saving model checkpoints.
+            patience: Number of epochs with no improvement after which training will be stopped.
+
         """
         self.sequence_length = 60
         self.hidden_size = 256
@@ -1827,30 +1878,30 @@ class Config:
         self.num_heads = 8
         self.intermediate_fc_size = self.hidden_size * 4
         self.warmup_steps = 4000
-        self.num_layers = 2
+        self.num_blocks = 2
         self.final_dropout_prob = 0.5
         self.epochs = 30
         self.checkpoint_filepath = '/content/drive/MyDrive/Colab Notebooks/NMT/tmp/checkpoint'
+        self.patience = 3
+```
+
+### Monitor
+
+```
+import tensorflow as tf
 
 config = Config()
 
+# Create the Transformer model
 transformer = Transformer(config, config.source_vocab_size, config.target_vocab_size)
 
+# Create the learning rate schedule
 lr = LrSchedule(config)
 
-early_stopping = tf.keras.callbacks.EarlyStopping(
-    monitor='val_loss',
-    mode='min',
-    patience=4
-)
+# Create the custom callbacks for monitoring and early stopping
+callbacks = TransformerCallbacks(config)
 
-model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    filepath=config.checkpoint_filepath,
-    monitor='val_loss',
-    mode='min',
-    save_best_only=True
-)
-
+# Create the Adam optimizer with the custom learning rate
 optimizer = tf.keras.optimizers.Adam(
     lr,
     beta_1=0.9,
@@ -1858,17 +1909,20 @@ optimizer = tf.keras.optimizers.Adam(
     epsilon=1e-9
 )
 
+# Compile the Transformer model with the custom loss function and optimizer
 transformer.compile(
     loss=cce_loss,
     optimizer=optimizer,
     metrics=[masked_accuracy]
 )
 
+# Train the Transformer model on the training dataset
+# and validate it on the validation dataset
 history = transformer.fit(
     train_ds,
     epochs=config.epochs,
     validation_data=val_ds,
-    callbacks=[early_stopping, model_checkpoint]
+    callbacks=callbacks
 )
 ```
 
