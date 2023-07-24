@@ -368,31 +368,6 @@ Where `PE(pos, 2i)` represents the `i-th` dimension of the positional encoding f
 ```
 import tensorflow as tf
 
-def create_positional_encoding_matrix(sequence_length, embedding_dimension, frequency_factor=10000):
-    """
-    Create a positional encoding matrix.
-
-    Args:
-        sequence_length (int): Length of the input sequence.
-        embedding_dimension (int): Dimensionality of the positional embeddings. Must be an even integer.
-        frequency_factor (int): Constant for the sinusoidal functions.
-
-    Returns:
-        tf.Tensor: Matrix of positional embeddings of shape (sequence_length, embedding_dimension).
-        The value at element (k, 2i) is sin(k / frequency_factor^(2i / embedding_dimension)),
-        and the value at element (k, 2i+1) is cos(k / frequency_factor^(2i / embedding_dimension)).
-    """
-    assert embedding_dimension % 2 == 0, "Embedding dimension needs to be an even integer"
-    embedding_dimension_half = embedding_dimension // 2
-    positions = tf.range(sequence_length, dtype=tf.float32)[:, tf.newaxis]  # Column vector of shape (sequence_length, 1)
-    frequency_indices = tf.range(embedding_dimension_half, dtype=tf.float32)[tf.newaxis, :]  # Row vector of shape (1, embedding_dimension/2)
-    frequency_denominator = tf.pow(frequency_factor, -frequency_indices / embedding_dimension_half)  # frequency_factor^(-2i/d)
-    frequency_arguments = positions / frequency_denominator  # Matrix of shape (sequence_length, embedding_dimension)
-    sin_values = tf.sin(frequency_arguments)
-    cos_values = tf.cos(frequency_arguments)
-    positional_encodings = tf.concat([sin_values, cos_values], axis=1)
-    return positional_encodings
-
 class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
     """
     SinusoidalPositionalEncoding layer.
@@ -402,18 +377,15 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
     Args:
         config (object): Configuration object containing parameters.
     """
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, name = None, **kwargs):
         """
         Initialize the SinusoidalPositionalEncoding layer.
 
         Args:
             config (object): Configuration object with parameters for positional encoding.
         """
-        super().__init__(**kwargs)
-        self.sequence_length = config.sequence_length
-        self.position_encoding = create_positional_encoding_matrix(
-            config.sequence_length, config.hidden_size, config.frequency_factor
-        )
+        super(SinusoidalPositionalEncoding, self).__init__(name = name)
+        super(SinusoidalPositionalEncoding, self).__init__(**kwargs)
 
     def call(self, input_ids):
         """
@@ -425,11 +397,36 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: Output tensor with positional encodings added.
         """
-        if input_ids.shape[1] != self.sequence_length:
-            self.position_encoding = create_positional_encoding_matrix(
+        self.position_encoding = self.create_positional_encoding_matrix(
                 input_ids.shape[1], config.hidden_size, config.frequency_factor
-            )
+        )
         return self.position_encoding
+
+    def create_positional_encoding_matrix(self, sequence_length, embedding_dimension, frequency_factor=10000):
+        """
+        Create a positional encoding matrix.
+
+        Args:
+            sequence_length (int): Length of the input sequence.
+            embedding_dimension (int): Dimensionality of the positional embeddings. Must be an even integer.
+            frequency_factor (int): Constant for the sinusoidal functions.
+
+        Returns:
+            tf.Tensor: Matrix of positional embeddings of shape (sequence_length, embedding_dimension).
+            The value at element (k, 2i) is sin(k / frequency_factor^(2i / embedding_dimension)),
+            and the value at element (k, 2i+1) is cos(k / frequency_factor^(2i / embedding_dimension)).
+        """
+        assert embedding_dimension % 2 == 0, "Embedding dimension needs to be an even integer"
+        embedding_dimension_half = embedding_dimension // 2
+        positions = tf.range(sequence_length, dtype=tf.float32)[:, tf.newaxis]  # Column vector of shape (sequence_length, 1)
+        frequency_indices = tf.range(embedding_dimension_half, dtype=tf.float32)[tf.newaxis, :]  # Row vector of shape (1, embedding_dimension/2)
+        frequency_denominator = tf.pow(frequency_factor, -frequency_indices / embedding_dimension_half)  # frequency_factor^(-2i/d)
+        frequency_arguments = positions / frequency_denominator  # Matrix of shape (sequence_length, embedding_dimension)
+        sin_values = tf.sin(frequency_arguments)
+        cos_values = tf.cos(frequency_arguments)
+        positional_encodings = tf.concat([sin_values, cos_values], axis=1)
+
+        return positional_encodings
 
     def get_config(self):
         """
@@ -439,9 +436,6 @@ class SinusoidalPositionalEncoding(tf.keras.layers.Layer):
             dict: Configuration dictionary.
         """
         config = super().get_config()
-        config.update({
-            "position_embeddings": self.position_embeddings,
-        })
         return config
 ```
 
@@ -452,9 +446,12 @@ Testing:
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 14969
+        self.target_vocab_size = 29219
         self.hidden_size = 4
         self.frequency_factor = 10000
-        
+        self.mask_zero = True
+
 config = Config()
 
 # Create an instance of the SinusoidalPositionalEncoding layer
@@ -473,7 +470,6 @@ print("Outputs:")
 print(input_ids)
 print(output_embeddings)
 ```
-
 ```
 Outputs:
 tf.Tensor([[2 0 0 0]], shape=(1, 4), dtype=int32)
@@ -510,10 +506,11 @@ class PositionalEmbeddings(tf.keras.layers.Layer):
         config (object): Configuration object containing parameters.
     """
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, name = None, **kwargs):
+        super(PositionalEmbeddings, self).__init__(name = name)
         super(PositionalEmbeddings, self).__init__(**kwargs)
         self.positional_embeddings = tf.keras.layers.Embedding(
-            input_dim=config.max_position_embeddings, output_dim=config.hidden_size
+            input_dim=config.sequence_length, output_dim=config.hidden_size
         )
 
     def call(self, input_ids):
@@ -552,15 +549,16 @@ Testing:
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 14969
+        self.target_vocab_size = 29219
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
         self.mask_zero = True
-        
 
 config = Config()
 
-# Create an instance of the SinusoidalPositionalEncoding layer
+# Create an instance of the PositionalEmbeddings layer
 positional_encoding_layer = PositionalEmbeddings(config)
 
 # Create a sample input tensor with token IDs
@@ -617,7 +615,8 @@ class Embeddings(tf.keras.layers.Layer):
         norm (tf.keras.layers.LayerNormalization): Layer normalization for normalization.
     """
 
-    def __init__(self, config, vocab_size,  **kwargs):
+    def __init__(self, config, vocab_size, name = None,  **kwargs):
+        super(Embeddings, self).__init__(name = name)
         super(Embeddings, self).__init__(**kwargs)
         self.token_embeddings = tf.keras.layers.Embedding(
             input_dim= vocab_size, output_dim=config.hidden_size
@@ -681,43 +680,85 @@ class Embeddings(tf.keras.layers.Layer):
 Testing:
 
 ```
-# Define the configuration
-class Config:
-    def __init__(self):
-        self.sequence_length = 4
-        self.hidden_size = 4
-        self.frequency_factor = 10000
-        self.max_position_embeddings = 4
-        self.positional_information_type = 'embs'
-        self.source_vocab_size = 10
-        self.target_vocab_size = 10
-        self.hidden_dropout_prob = 0.1
+import tensorflow as tf
 
+class Embeddings(tf.keras.layers.Layer):
+    """
+    Embeddings layer.
 
-config = Config()
+    This layer combines token embeddings with positional embeddings to create the final embeddings.
 
-# Create an instance of the SinusoidalPositionalEncoding layer
-Embeddings_layer = Embeddings(configو vocab_size = 10)
+    Args:
+        config (object): Configuration object containing parameters.
+        vocab_size: Vocabulary size.
 
-# Create a sample input tensor with token IDs
-batch_size = 1
-seq_length = 4
-input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
+    Attributes:
+        token_embeddings (tf.keras.layers.Embedding): Token embedding layer.
+        PositionalInfo (tf.keras.layers.Layer): Positional information layer.
+        dropout (tf.keras.layers.Dropout): Dropout layer for regularization.
+        norm (tf.keras.layers.LayerNormalization): Layer normalization for normalization.
+    """
 
-# Apply positional encodings
-output_embeddings = Embeddings_layer(input_ids)
+    def __init__(self, config, vocab_size, name = None,  **kwargs):
+        super(Embeddings, self).__init__(name = name)
+        super(Embeddings, self).__init__(**kwargs)
+        self.token_embeddings = tf.keras.layers.Embedding(
+            input_dim= vocab_size, output_dim=config.hidden_size
+        )
+        if config.positional_information_type == 'embs':
+            self.PositionalInfo = PositionalEmbeddings(config)
+        elif config.positional_information_type == 'sinu':
+            self.PositionalInfo = SinusoidalPositionalEncoding(config)
 
-# Print the output positional embeddings
-print("Outputs:")
-print(output_embeddings)
-"""
-Outputs:
-tf.Tensor(
-[[[ 1.1676207  -0.2399907  -0.48948863 -0.43814147]
-  [-0.11419237  0.06112379  0.4712959  -0.41822734]
-  [ 0.6345568  -0.9779921   0.04900781  0.2944275 ]
-  [ 1.2179315  -0.09482005 -0.9809958  -0.14211564]]], shape=(1, 4, 4), dtype=float32)
-"""
+        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
+        self.norm = tf.keras.layers.LayerNormalization()
+
+    def call(self, input_ids, training=False):
+        """
+        Generate embeddings for input IDs.
+
+        Args:
+            input_ids (tf.Tensor): Input tensor containing token IDs.
+            training (bool, optional): Whether the model is in training mode. Defaults to False.
+
+        Returns:
+            tf.Tensor: Embeddings tensor of shape (batch_size, seq_length, hidden_size).
+        """
+        positional_info = self.PositionalInfo(input_ids)
+        x = self.token_embeddings(input_ids)
+        x += positional_info
+        x = self.norm(x)
+        x = self.dropout(x, training=training)
+        return x
+
+    def compute_mask(self, inputs, mask=None):
+        """
+        Computes the mask for the inputs.
+
+        Args:
+            inputs (tf.Tensor): Input tensor.
+            mask (tf.Tensor, optional): Mask tensor. Defaults to None.
+
+        Returns:
+            tf.Tensor: Computed mask tensor.
+        """
+        return tf.math.not_equal(inputs, 0)
+
+    def get_config(self):
+        """
+        Get the layer configuration.
+
+        Returns:
+            dict: Dictionary containing the layer configuration.
+        """
+        config = super().get_config()
+        config.update({
+            "token_embeddings": self.token_embeddings,
+            "PositionalInfo": self.PositionalInfo,
+            "dropout": self.dropout,
+            "norm": self.norm,
+        })
+        return config
 ```
 ```
 Outputs:
@@ -779,8 +820,9 @@ class AttentionHead(tf.keras.layers.Layer):
         value_weights: Dense layer for value projection.
     """
 
-    def __init__(self, head_dim, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, head_dim, name = None, **kwargs):
+        super(AttentionHead, self).__init__(name = name)
+        super(AttentionHead, self).__init__(**kwargs)
         self.supports_masking = True  # Enable masking support
         self.head_dim = head_dim
         self.query_weights = tf.keras.layers.Dense(head_dim)
@@ -863,8 +905,9 @@ class MultiHead_Attention(tf.keras.layers.Layer):
         fc: Fully connected layer for final projection.
     """
 
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, config, name=None, **kwargs):
+        super(MultiHead_Attention, self).__init__(name=name)
+        super(MultiHead_Attention, self).__init__(**kwargs)
         self.supports_masking = True
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_heads
@@ -918,11 +961,11 @@ Testing:
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.source_vocab_size = 10
-        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -931,10 +974,8 @@ config = Config()
 
 Embeddings_layer = Embeddings(config, 10)
 
-# Create a sample input tensor with token IDs
 input_ids = tf.constant([[2, 2, 0, 0]])
 
-# Apply Embeddings_layer
 x = Embeddings_layer(input_ids)
 
 # Apply MultiHeadAttention
@@ -960,8 +1001,6 @@ tf.Tensor(
 The feed-forward sublayer in both the encoder and decoder modules can be described as a simple two-layer fully connected neural network. However, its operation differs from a standard network in that it treats each embedding in the sequence independently rather than processing the entire sequence as a single vector. Because of this characteristic, it is often referred to as a **position-wise feed-forward layer**. In the literature, a general guideline suggests setting the hidden size of the first layer to be four times the size of the embeddings. Additionally, a GELU activation function is commonly used in this layer. It is believed that this particular sublayer contributes significantly to the model's capacity and memorization abilities. Consequently, when scaling up the models, this layer is often a focal point for adjustment and expansion.
 
 يمكن وصف الطبقة الفرعية للتغذية الأمامية في كل من وحدات التشفير وفك التشفير على أنها شبكة عصبية بسيطة من طبقتين متصلتين بالكامل. ومع ذلك، فإن عملها يختلف عن الشبكة القياسية من حيث أنه يتعامل مع كل تضمين في التسلسل بشكل مستقل بدلاً من معالجة التسلسل بأكمله كمتجه واحد. بسبب هذه الخاصية، يُشار إليها غالبًا باسم ** طبقة تغذية أمامية موضع بموضع**. في الأدبيات (المراجع العلمية)، يقترح النهج العام تحديد حجم للطبقة الأولى ليكون أربعة أضعاف حجم التضمينات. بالإضافة إلى ذلك، يتم استخدام دالة تنشيط GELU بشكل شائع في هذه الطبقة. من المُعتقد أن هذه الطبقة الفرعية تساهم بشكل كبير في سعة استيعاب النموذج للمعلومات وقدراته على الحفظ. وبالتالي، عند توسيع نطاق النماذج، غالبًا ما تكون هذه الطبقة نقطة محورية للضبط والتوسيع.
-
-
     
 ```
 class FeedForward(tf.keras.layers.Layer):
@@ -978,8 +1017,9 @@ class FeedForward(tf.keras.layers.Layer):
         dropout: Dropout layer.
     """
 
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, config, name=None, **kwargs):
+        super(FeedForward, self).__init__(name=name)
+        super(FeedForward, self).__init__(**kwargs)
         self.supports_masking = True
         self.fc1 = tf.keras.layers.Dense(config.intermediate_fc_size, activation=tf.keras.activations.gelu)
         self.fc2 = tf.keras.layers.Dense(config.hidden_size)
@@ -1043,8 +1083,9 @@ class Encoder(tf.keras.layers.Layer):
         dropout: Dropout layer.
     """
 
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, config, name=None, **kwargs):
+        super(Encoder, self).__init__(name=name)
+        super(Encoder, self).__init__(**kwargs)
         self.supports_masking = True
         self.multihead_attention = MultiHead_Attention(config)
         self.norm1 = tf.keras.layers.LayerNormalization()
@@ -1098,11 +1139,11 @@ Testing:
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.source_vocab_size = 10
-        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1113,15 +1154,12 @@ config = Config()
 
 Embeddings_layer = Embeddings(config, 10)
 
-# Create a sample input tensor with token IDs
 batch_size = 2
 seq_length = 4
 input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
 
-# Apply Embeddings_layer
 x = Embeddings_layer(input_ids)
 
-# Apply Encoder
 encoder = Encoder(config)
 x = encoder(x)
 
@@ -1144,7 +1182,6 @@ tf.Tensor(
 
 We’ve now implemented our first transformer encoder layer from scratch!
 
-<br>
 <br>
 
 ### Decoder
@@ -1215,8 +1252,9 @@ class Decoder(tf.keras.layers.Layer):
         dropout: Dropout layer.
     """
 
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, config, name=None, **kwargs):
+        super(Decoder, self).__init__(name=name)
+        super(Decoder, self).__init__(**kwargs)
         self.supports_masking = True
         self.masked_multihead_attention = MultiHead_Attention(config)
         self.multihead_attention = MultiHead_Attention(config)
@@ -1255,23 +1293,6 @@ class Decoder(tf.keras.layers.Layer):
         hidden_state = self.dropout(hidden_state, training=training)
         return hidden_state
 
-    def get_config(self):
-        """
-        Returns the configuration of the decoder layer.
-
-        Returns:
-            Configuration dictionary.
-        """
-        config = super().get_config()
-        config.update({
-            "multihead_attention": self.multihead_attention,
-            "norm1": self.norm1,
-            "norm2": self.norm2,
-            "feed_forward": self.feed_forward,
-            "dropout": self.dropout,
-        })
-        return config
-
     def get_causal_attention_mask(self, inputs):
         """
         Generates the causal attention mask.
@@ -1293,6 +1314,25 @@ class Decoder(tf.keras.layers.Layer):
             axis=0,
         )
         return tf.tile(mask, mult)
+
+    def get_config(self):
+        """
+        Returns the configuration of the decoder layer.
+
+        Returns:
+            Configuration dictionary.
+        """
+        config = super().get_config()
+        config.update({
+            "masked_multihead_attention": self.masked_multihead_attention,
+            "multihead_attention": self.multihead_attention,
+            "norm1": self.norm1,
+            "norm2": self.norm2,
+            "norm3": self.norm3,
+            "feed_forward": self.feed_forward,
+            "dropout": self.dropout,
+        })
+        return config
 ```
 
 Testing:
@@ -1301,11 +1341,11 @@ Testing:
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.source_vocab_size = 10
-        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1335,7 +1375,6 @@ x = decoder(x2, enc_out)
 print("Outputs:")
 print(x)
 ```
-
 ```
 Outputs:
 tf.Tensor(
@@ -1352,7 +1391,6 @@ tf.Tensor(
 
 Now we have finished building the main components of the model!
 
-<br>
 <br>
 
 ### Transformer Model
@@ -1384,12 +1422,13 @@ class Transformer(tf.keras.Model):
         get_config: Returns the configuration dictionary of the transformer model.
     """
 
-    def __init__(self, config, source_vocab_size, target_vocab_size):
-        super(Transformer, self).__init__()
+    def __init__(self, config, source_vocab_size, target_vocab_size, name=None, **kwargs):
+        super(Transformer, self).__init__(name=name)
+        super(Transformer, self).__init__(**kwargs)
         self.enc_embed_layer = Embeddings(config, source_vocab_size)
         self.dec_embed_layer = Embeddings(config, target_vocab_size)
-        self.encoder = [Encoder(config) for _ in range(config.num_layers)]
-        self.decoder = [Decoder(config) for _ in range(config.num_layers)]
+        self.encoder = [Encoder(config) for _ in range(config.num_blocks)]
+        self.decoder = [Decoder(config) for _ in range(config.num_blocks)]
         self.dropout = tf.keras.layers.Dropout(config.final_dropout_prob)
         self.output_layer = tf.keras.layers.Dense(target_vocab_size)
 
@@ -1434,8 +1473,17 @@ class Transformer(tf.keras.Model):
         Returns:
             Configuration dictionary.
         """
-        config = super(Transformer, self).get_config()
-        # Add custom configurations to the dictionary if needed
+        config = super().get_config()
+        config.update({
+            "enc_embed_layer": self.enc_embed_layer,
+            "dec_embed_layer": self.dec_embed_layer,
+            "encoder": self.encoder,
+            "decoder": self.decoder,
+            "dropout": self.dropout,
+            "encoder": self.encoder,
+            "decoder": self.decoder,
+            "output_layer": self.output_layer,
+        })
         return config
 ```
 
@@ -1477,17 +1525,14 @@ class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     Custom learning rate schedule with warmup for training.
 
     Args:
-        config: Configuration object containing hyperparameters.
-
-    Attributes:
+        hidden_size: Hidden size of the model.
         warmup_steps: Number of warmup steps for learning rate warmup.
-        d: Hidden size of the model.
     """
 
-    def __init__(self, config):
-        super().__init__()
-        self.warmup_steps = config.warmup_steps
-        self.d = tf.cast(config.hidden_size, tf.float32)
+    def __init__(self, hidden_size, warmup_steps=4000):
+        super(LrSchedule, self).__init__()
+        self.warmup_steps = warmup_steps
+        self.d = tf.cast(hidden_size, tf.float32)
 
     def __call__(self, step):
         """
@@ -1503,7 +1548,7 @@ class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         step = tf.cast(step, dtype=tf.float32)
         arg1 = tf.math.rsqrt(step)
         arg2 = step * (self.warmup_steps ** -1.5)
-        lr =  tf.math.rsqrt(self.d) * tf.math.minimum(arg1, arg2)
+        lr = tf.math.rsqrt(self.d) * tf.math.minimum(arg1, arg2)
         return lr
 
     def get_config(self):
@@ -1514,10 +1559,10 @@ class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
             Configuration dictionary.
 
         """
-        config = {
+        return {
             "warmup_steps": self.warmup_steps,
+            "hidden_size": int(self.d.numpy()),  # Cast to native Python int
         }
-        return config
 ```
 
 This corresponds to increasing the learning rate linearly for the first `warmup_steps` training steps, and decreasing it thereafter proportionally to the inverse square root of the step number. You can see how the learning rate values change with each time step with the following code:
@@ -1528,11 +1573,11 @@ import matplotlib.pyplot as plt
 class Config:
     def __init__(self):
         self.sequence_length = 4
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
         self.hidden_size = 4
         self.frequency_factor = 10000
         self.max_position_embeddings = 4
-        self.source_vocab_size = 10
-        self.target_vocab_size = 10
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
         self.num_heads = 2
@@ -1543,7 +1588,7 @@ class Config:
 config = Config()
 
 d = 768
-lr = LrSchedule(config)
+lr = LrSchedule(d)
 optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
 plt.plot(lr(tf.range(40000, dtype=tf.float32)))
@@ -1591,9 +1636,7 @@ def scce_masked_loss(label, pred):
     return loss
 ```
 
-
 When we are getting talking about loss function, we must refer to the *Label Smoothing*. It's a regularization technique commonly used in deep learning models, particularly in classification tasks, to improve generalization and prevent the model from becoming overly confident in its predictions. It addresses the issue where a model may assign a probability close to 1 to the predicted class and 0 to all other classes, leading to overfitting and potential sensitivity to small perturbations in the input. Label smoothing introduces a small amount of uncertainty or noise into the training process by modifying the target (ground truth) labels. Instead of using one-hot encoded labels with a single element set to 1 and all others set to 0, label smoothing distributes the probability mass among multiple classes ([read more](https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). In empirical studies, the improvement in machine translation performance due to label smoothing is typically in the range of 0.5% to 2%. However, these numbers are not fixed and can vary based on different factors. For certain datasets or model architectures, the improvement might be more significant, while for others, it might be less noticeable. One of the main challenges with using one-hot encoding and label smoothing in machine translation tasks with large vocabularies is the high dimensionality of the one-hot encoded vectors. As the vocabulary size increases, the one-hot encoded vectors become very sparse, leading to memory and computational inefficiencies. Here, we are not going to use it because of the limitations in the sources that we have. However, you could try it easily just by replacing `SparseCategoricalCrossentropy` with [`CategoricalCrossentropy`](https://github.com/keras-team/keras/tree/v2.13.1//keras/losses.py#L837), using the `label_smoothing` parameter, and representing the target sentences with one-hot encoding. Here's how you can use technique:
-
 
 ```
 import tensorflow as tf
@@ -1673,7 +1716,7 @@ def masked_accuracy(label, pred):
 ```
 
 However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like *BLEU*, *METEOR*, *ROUGE*, or *CIDEr*, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence. Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
-<br>
+
 <br>
 
 BLEU (Bilingual Evaluation Understudy) is another metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
@@ -1789,7 +1832,6 @@ However, it also has some limitations, such as sensitivity to sentence length an
 **Note:** This implementation you can use it to test the performance of the model later, but you can't use it during training, it needs somewhat boring modifications in order to comply with Tensorflow's operations. So if you want to use it, it is better to experience the implementation of the [Keras_nlp](https://keras.io/api/keras_nlp/metrics/bleu/) package.
 
 <br>
-<br>
 
 ### Callbacks
 
@@ -1842,7 +1884,7 @@ class TransformerCallbacks(tf.keras.callbacks.Callback):
                 print('Training stopped. No improvement after {} epochs.'.format(epoch))
 ```
 
-### Transformer Configuration
+### Configuration
 
 ```
 class Config:
@@ -1875,7 +1917,7 @@ class Config:
         self.target_vocab_size = 31405
         self.positional_information_type = 'embs'
         self.hidden_dropout_prob = 0.1
-        self.num_heads = 8
+        self.num_heads = 4
         self.intermediate_fc_size = self.hidden_size * 4
         self.warmup_steps = 4000
         self.num_blocks = 2
@@ -1896,7 +1938,7 @@ config = Config()
 transformer = Transformer(config, config.source_vocab_size, config.target_vocab_size)
 
 # Create the learning rate schedule
-lr = LrSchedule(config)
+lr = LrSchedule(config.hidden_size, config.warmup_steps)
 
 # Create the custom callbacks for monitoring and early stopping
 callbacks = TransformerCallbacks(config)
@@ -1928,4 +1970,124 @@ history = transformer.fit(
 
 ## Inference
 
+```
+import pickle
+import tensorflow as tf
+
+class Config:
+    def __init__(self):
+        """
+        Configuration class for transformer model hyperparameters.
+
+        Attributes:
+            sequence_length: Maximum sequence length for input sequences.
+            hidden_size: Hidden size for the transformer model.
+            frequency_factor: Frequency factor for positional encodings.
+            source_vocab_size: Vocabulary size for the source language.
+            target_vocab_size: Vocabulary size for the target language.
+            positional_information_type: Type of positional embeddings to use.
+            hidden_dropout_prob: Dropout probability for the hidden layers.
+            num_heads: Number of attention heads in multi-head attention.
+            intermediate_fc_size: Size of the intermediate fully connected layer.
+            warmup_steps: Number of warm-up steps for learning rate scheduling.
+            num_blocks: Number of encoder and decoder blocks in the transformer.
+            final_dropout_prob: Dropout probability for the final output.
+            epochs: Number of epochs for training.
+            checkpoint_filepath: Filepath for saving model checkpoints.
+        """
+        self.sequence_length = 60
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.source_vocab_size = 16721
+        self.target_vocab_size = 31405
+        self.positional_information_type = 'embs'
+        self.hidden_dropout_prob = 0.1
+        self.num_heads = 1
+        self.intermediate_fc_size = self.hidden_size * 1
+        self.warmup_steps = 4000
+        self.num_blocks = 1
+        self.final_dropout_prob = 0.5
+        self.epochs = 1
+        self.checkpoint_filepath = '/content/drive/MyDrive/Colab Notebooks/NMT/tmp/checkpoint'
+        self.patience = 5
+
+config = Config()
+
+with open("vectorize.pickle", "rb") as fp:
+    data = pickle.load(fp)
+
+test_pairs = data["test"]
+eng_vectorizer = tf.keras.layers.TextVectorization.from_config(data["engvec_config"])
+eng_vectorizer.set_weights(data["engvec_weights"])
+fra_vectorizer = tf.keras.layers.TextVectorization.from_config(data["fravec_config"])
+fra_vectorizer.set_weights(data["fravec_weights"])
+
+# Load the trained model
+custom_objects = {
+    "LrSchedule": LrSchedule,
+    "PositionalEmbeddings": PositionalEmbeddings,
+    "Embeddings": Embeddings,
+    "AttentionHead": AttentionHead,
+    "MultiHead_Attention": MultiHead_Attention,
+    "FeedForward": FeedForward,
+    "Encoder": Encoder,
+    "Decoder": Decoder,
+    "Transformer": Transformer,
+    "cce_loss": cce_loss,
+    "masked_accuracy": masked_accuracy}
+
+with tf.keras.utils.custom_object_scope(custom_objects):
+    model = tf.keras.models.load_model('/content/drive/MyDrive/Colab Notebooks/NMT/tmp/checkpoint')
+
+def translate(sentence, sequence_length, target_vocab_size):
+    """
+    Generate the translated sentence using the trained Transformer model.
+
+    Args:
+        sentence (str): The input English sentence to be translated.
+        sequence_length (int): Maximum sequence length for input sequences.
+        target_vocab_size (int): Vocabulary size for the target language.
+
+    Returns:
+        list: A list containing the translated words in the target language.
+
+    """
+    enc_tokens = eng_vectorizer([sentence])
+    lookup = list(fra_vectorizer.get_vocabulary())
+    start_sentinel, end_sentinel = "[start]", "[end]"
+    output_sentence = [start_sentinel]
+
+    # Generate the translated sentence word by word
+    for i in range(sequence_length):
+        vector = fra_vectorizer([" ".join(output_sentence)])
+        assert vector.shape == (1, sequence_length + 1)
+        dec_tokens = vector[:, :-1]
+        assert dec_tokens.shape == (1, sequence_length)
+        pred = model({"encoder_inputs": enc_tokens, "decoder_inputs": dec_tokens}, training=False)
+        assert pred.shape == (1, sequence_length, target_vocab_size)
+        word = lookup[np.argmax(pred[0, i, :])]
+        output_sentence.append(word)
+        if word == end_sentinel:
+            break
+
+    return output_sentence
+```
+
+Testing:
+
+```
+test_count = 3
+for n in range(test_count):
+    english_sentence, french_sentence = random.choice(test_pairs)
+    translated = translate(english_sentence)
+    print(f"Test {n}:")
+    print(f"Source sentence:{english_sentence}")
+    print(f"Typical translation: {french_sentence}")
+    print(f"Model translation {' '.join(translated)}")
+    print()
+```
+```
+Output:
+
+```
 ## Conclusion
