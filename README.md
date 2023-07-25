@@ -4,8 +4,6 @@ The task of translating text from one language into another is a common task. In
 
 تعتبر مهمة ترجمة النص من لغة إلى لغة أخرى من المهام الشائعة. سأقوم في هذا الريبو ببناء وشرح نموذج بسيط لمهمة الترجمة من اللغة الإنجليزية إلى اللغة الفرنسية باستخدام تنسرفلو، وهو مستلهم من النموذج الذي تم تقديمه في ورقة "الانتباه هو كل ماتحتاجه". أهدف من خلال هذا المشروع إلى بناء مرجع قد يفيد الوافدين الجدد أو أحدًا ما يريد أن يفهم أو يبني المحولات من الصفر.
 <br>
-<br>
-<br>
 
 ## Transformer architecture
 
@@ -48,7 +46,7 @@ We’ll look at each of this components in details later, but we can already see
 
 
 نلقي نظرة على كل مكون بالتفصيل قريبًا، ولكن يمكننا رؤية بعض الأشياء في الشكل أعلاه والتي تُميّز بنية المحولات. يتم تقطيع النص المُدخل إلى وحدات نصية (يمكن اعتبارها كلمات) ثم يتم ربط كل وحدة نصية بشعاع تضمين يمثّلها. بما أن آلية الانتباه لاتستطيع التعرّف على مواقع الوحدات النصية، فإننا بحاجة إلى طريقةٍ ماتمكننا من إضافة بعض المعلومات التي تعبر عن مواقع هذه الوحدات إلى تمثيلات الوحدات النصية السابقة. يتم ذلك من خلال طبقة الترميز الموضعي، حيث يتم ربط كل موقع ضمن التسلسل بشعاع يُضاف إلى تمثيل الوحدة النصية الموافقة لذلك الموقع. يتألف المُشفّر من عدة طبقات متماثلة من حيث البنية ومكدسة فوق بعضها بطريقة مشابهة لتكديس طبقات *CNN*، كل منها تدعى "طبقة تشفير" أو "كِتل". يتم تمرير تمثيلات الوحدات النصية إلى هذه الكتل، ويكون خرجها تمثيل جديد أكثر قوة للوحدات النصية. يتم تمرير خرج وحدة المُشفّر (تمثيلات الوحدات النصية لجملة الدخل) إلى كل طبقة فك تشفير في وحدة فك التشفير (طبقة فك التشفير تتألف من عدة طبقات فك تشفير، أي بشكل مشابه لوحدة التشفير). تقوم وحدة فك التشفير بتوليد توقع يُمثّل الوحدة النصية التالية في جملة الهدف -الأكثر رجوحًا. تستمر عملية التوليد هذه وصولًا إلى رمز نهاية السلسلة *EOS*. في المثال الموضّح في الشكل أعلاه، تخيل أن وحدة فك التشفير توقعت كلمة *Die* وكلمة *Zeit*. الآن سيتم أخذ هذه الكلمات كدخل إلى وحدة فك التشفير جنبًا إلى جنب مع خرج المُشفّر لتوقع الوحدة النصية التالية والتي هي *fliegt*. في الخطوة التالية سيتم استخدام الكلمات الجديدة جنبًا إلى جنبًا مع الكلمات السابقة وخرج المشفر لتوليد الكلمة التالية. يتم تكؤار هذه العملية حتى يتم توقع رمز نهاية الجملة EOS. فيما يلي خطوات بناء نموذج ترجمة من الإنجليزية إلى الفرنسية باستخدام بنية المحولات.
-
+<br>
 
 ## Data preparation
 
@@ -239,10 +237,11 @@ Now we have to define how we will pass the data to the model. There are several 
    * الدالة `shuffle(n)`: يقوم عشوائيًا بملء مخزن مؤقت بـ `n` عينة بيانات ويعمل على خلط البيانات في المخزن.
    * الدالة `batch(n)`: يولد دُفعات من مجموعة البيانات، كل منها بحجم n.
    * الدالة `prefetch(n)`: للاحتفاظ ب n دُفعات/عناصر جاهزة في الذاكرة تمهيدًا لاستهلاكها في التكرار التالي لعملية التدريب.
-   * الدالة `cache`: يقوم بتخبئة البيانات بكفاءة لتسريع القراءة في المرات التالية (اعتقد أنها تحاول عدم تكرار نفس عمليات المعالجة في كل مرة، أي تجعلها تُطبّق مرة واحدة).
+   * الدالة `()cache`: يقوم بتخبئة البيانات بكفاءة لتسريع القراءة في المرات التالية (اعتقد أنها تحاول عدم تكرار نفس عمليات المعالجة في كل مرة، أي تجعلها تُطبّق مرة واحدة).
    * الدالة `map(func)`: تطبيق تحويل (دالة) على البيانات.
   * [اقرأ أكثر](https://pyimagesearch.com/2021/06/14/a-gentle-introduction-to-tf-data-with-tensorflow/).
   * [ِوهنا أيضًا](https://stackoverflow.com/questions/76414594/shuffle-the-batches-in-tensorflow-dataset/76443517#76443517).
+ 
 ```
 from tensorflow.data import AUTOTUNE
 
@@ -321,11 +320,11 @@ targets[0]: [  6  82   8 436  13 821 527 172   4   3   0   0   0   0   0   0   0
 
 Now, we have our data ready to be fed into a model.
 
+<br>
 
 ## Transformer Building Blocks
 We will now build each component of the Transformer independently.
-<br>
-<br>
+
 ### Positional information
 
 Positional encoding is a technique used in transformers to incorporate the positional information of words or tokens into the input embeddings. Since transformers don't have any inherent notion of word order, positional encoding helps the model understand the sequential order of the input sequence. In transformers, positional encoding is typically added to the input embeddings before feeding them into the encoder or decoder layers. The positional encoding vector is added element-wise to the token embeddings, providing each token with a unique position-dependent representation. There are three common types of positional encodings used in transformers:
@@ -352,7 +351,6 @@ In this section we will investigate the two approaches: **Learned Positional Emb
 تعتمد اختيار الترميز الموضعي على المهمة المحددة وقاعدة البيانات وهندسة النموذج المستخدم. يُستخدم ترميز الموضع الساينوسي على نطاق واسع وأظهر أداءً جيدًا في مختلف النماذج المعتمدة على النماذج المحوَّلة. ومع ذلك، يمكن أن تكون التجارب على أنواع مختلفة من الترميز الموضعي مفيدة لتحسين قدرة النموذج على التقاط المعلومات الموضعية بفعالية.
 
 نتحقق من نهجين: **تضمينات الموضع المتعلمة** و**التشفير الموضعي الجيبي**. غالبًا ما لا يكون من الضروري استخدام طرق تشفير موضعية معقدة، فالتشفير الموضعي الجيبي القياسي المستخدم في النموذج الأصلي يعمل بشكل جيد.
-
 
 #### Sinusoidal positional encoding
 
@@ -587,7 +585,6 @@ By allowing the model to learn the positional representations, the learned posit
  يُمكن من خلال السماح للنموذج بتعلم التمثيلات الموضعية، التقاط التبعيات والأنماط المعقدة الخاصة بتسلسل الإدخال. يمكن للنموذج تكييف انتباهه وحسابه بناءً على المواضع النسبية للعناصر، والتي يمكن أن تكون مفيدة للمهام التي تتطلب فهمًا قويًا للطبيعة المتسلسلة للبيانات.
  
 <br>
-<br>
 
 ### Embedding layer
 
@@ -782,7 +779,6 @@ Each of these sublayers also uses skip connections and layer normalization, whic
 تستخدم كل طبقة من هذه الطبقات الفرعية أيضًا وصلات التخطي وتقييس الطبقة، وهي حيل قياسية لتدريب الشبكات العصبية العميقة بفعالية. ولكن لكي نفهم حقًا ما الذي يجعل المحولات تعمل، علينا أن نتعمق أكثر. لنبدأ بأهم لبنة: طبقة *الانتباه الذاتي*.
 
 <br>
-<br>
 
 ### Self-Attention
 
@@ -879,7 +875,6 @@ We’ve initialized three independent linear layers that apply matrix multiplica
 
 لقد قمنا بتهيئة ثلاث طبقات خطية مستقلة لتطبيق عمليات الضرب المصفوفية على متجهات التضمين لإنتاج موترات من الشكل *[batch_size، seq_len، head_dim]* ، حيث `head_dim` هو عدد الأبعاد التي نُسقط إليها. في الممارسات العملية تكون `head_dim` أصغر من عدد أبعاد التضمين `embed_dim`، ويتم اختياره ليكون من مضاعفات `embed_dim` بحيث يكون حجم كل رأس ثابتًا. على سبيل المثال، يحتوي BERT على رؤوس انتباه *12*، وبالتالي فإن بُعد كل رأس هو *768/12=64*. من الواضح أن الدمج بين مجموعات متعددة من الإسقاطات الخطية، بحيث كل منها يُمثل رأس انتباه. لكن لماذا من الضروري أن يكون لديك أكثر من رأس انتباه؟ والسبب هو أنه عند استخدام رأس واحد فقط، يميل softmax إلى التركيز على جانب واحد من أوجه التشابه. كما أن وجود عدة رؤوس يوفر شكلاً من أشكال التكرار. إذا فشل رأس واحد في تعلم نمط الانتباه الصحيح، فلا يزال بإمكان الرؤوس الآخرى التقاط المعلومات ذات الصلة. يمكن أن يؤدي هذا التكرار إلى تحسين متانة النموذج وتقليل الضبط المُفرط. ميزة أخرى هي أن رؤوس الانتباه تعمل بشكل مستقل، مما يسمح بالتوازي أثناء التدريب والاستدلال، مما يؤدي إلى تسريع العمليات الحسابية.
 
-<br>
 <br>
 
 ### Multi-headed attention
@@ -993,7 +988,7 @@ tf.Tensor(
   [-2.4666185  -0.09850129  1.303617   -0.2874905 ]
   [-2.549143   -0.1712878   1.3354063  -0.39174497]]], shape=(1, 4, 4), dtype=float32)
 ```
-<br>
+
 <br>
 
 ### The Feed-Forward Layer and Normalization
@@ -1059,8 +1054,13 @@ class FeedForward(tf.keras.layers.Layer):
 
 It is important to note that when using a feed-forward layer like `dense`, it is typically applied to a tensor with a shape of `(batch_size, input_dim)`. In this case, the layer operates independently on each element of the batch dimension. This applies to all dimensions except for the last one. Therefore, when we pass a tensor with a shape of `(batch_size, seq_len, hidden_dim)`, the feed-forward layer is applied to each token embedding of the batch and sequence separately, which aligns perfectly with our desired behavior.
 
+من المهم ملاحظة أنه عند استخدام طبقة تغذية أمامية مثل `dense`، يتم تطبيقها عادةً على موتر من الشكل `(batch_size, input_dim)`. في هذه الحالة، تعمل الطبقة بشكل مستقل على كل عنصر من أبعاد الدُفعة. ينطبق هذا على جميع الأبعاد باستثناء الأبعاد الأخيرة. لذلك، عندما نمرر موترًا على شكل `(batch_size, seq_len, hidden_dim)`، يتم تطبيق طبقة التغذية الأمامية على تضمين كل وحدة نصية في السلسلة بشكل منفصل عن باقي الوحدات، ونفس الأمر للوحدات النصية في بقية السلاسل من الدُفعة، وهذا يتماشى تمامًا مع السلوك المطلوب.
+
 **Adding Layer Normalization.** When it comes to placing layer normalization in the encoder or decoder layers of a transformer, there are two main choices that have been widely adopted in the literature. The first choice is to apply layer normalization before each sub-layer, which includes the self-attention and feed-forward sub-layers. This means that the input to each sub-layer is normalized independently , it's called **Pre layer normalization**. The second choice is to apply layer normalization after each sub-layer, which means that the normalization is applied to the output of each sub-layer, it's called **Post layer normalization**. Both approaches have their own advantages and have been shown to be effective in different transformer architectures. The choice of placement often depends on the specific task and architecture being used.
-<br>
+
+
+**إضافة تقييس طبقة.** عندما يتعلق الأمر بوضع تقييس طبقة في طبقات التشفير أو فك التشفير لمحوّل، هناك خياران رئيسيان تم اعتمادهما على نطاق واسع في الأدبيات. الخيار الأول هو تطبيق تقييس الطبقة قبل كل طبقة فرعية، والتي تتضمن طبقات الانتباه الذاتي والتغذية الأمامية. هذا يعني أن الإدخال إلى كل طبقة فرعية يتم تقييسه بشكل مستقل، ويُطلق عليه **تقييس ما قبل الطبقة**. الخيار الثاني هو تطبيق تقييس طبقة بعد كل طبقة فرعية، مما يعني أنه يتم تطبيق التقييس على ناتج كل طبقة فرعية، ويسمى **التقييس اللاحق للطبقة**. كلا النهجين لهما مزايا خاصة بهما وقد ثبت أنهما فعالان في بنيات المحولات المختلفة. غالبًا ما يعتمد اختيار الموضع على المهمة المحددة والبنية المستخدمة.
+
 <br>
 
 ### Encoder layer
@@ -1180,7 +1180,9 @@ tf.Tensor(
   [ 0.02217576  0.5394346  -1.6122792   1.0506687 ]]], shape=(2, 4, 4), dtype=float32)
 ```
 
-We’ve now implemented our first transformer encoder layer from scratch!
+We’ve now implemented our transformer encoder layer from scratch!
+
+لقد قمنا الآن بتحقيق طبقة التشفير للمحول من الصفر!
 
 <br>
 
@@ -1192,6 +1194,13 @@ The main difference between the decoder and encoder is that the decoder has two 
 2. **Encoder-decoder attention layer.** Performs multi-head attention over the output key and value vectors of the encoder stack, with the intermediate representations of the decoder acting as the queries. This way the encoder-decoder attention layer learns how to relate tokens from two different sequences, such as two different languages. The decoder has access to the encoder keys and values in each block.
 
 Let’s take a look at the modifications we need to make to include masking in our self-attention layer. The trick with masked self-attention is to introduce a mask matrix with ones on the lower diagonal and zeros above:
+
+يتمثل الاختلاف الرئيسي بين وحدة فك التشفير والتشفير في أن وحدة فك التشفير لها طبقتان فرعيتان للانتباه:
+
+1. **طبقة الانتباه الذاتي المقنعة متعددة الرؤوس.** تضمن أن الوحدات النصية التي ننتجها في كل خطوة زمنية تستند فقط إلى المخرجات السابقة والوحدة النصية الحالية التي يتم توقعها. بدون ذلك، يمكن لوحدة فك التشفير الغش أثناء التدريب عن طريق نسخ الترجمات المستهدفة؛ يضمن إخفاء المدخلات أن المهمة ليست بديهية.
+2. **طبقة الانتباه المتقاطعة.** تُطبّق انتباهًا متعدد الرؤوس على شعاع المفتاح والقيمة الناتجان من آخر طبقة من المُشفّر، مع استخدام شعاع القيمة الناتج من *طبقة الانتباه الذاتي المقنعة متعددة الرؤوس* بمثابة استعلامات. بهذه الطريقة، تتعلم *طبقة الانتباه المتقاطعة* كيفية ربط الوحدات النصية من تسلسلين مختلفين، أي بمعنى آخر لغتين مختلفتين. يمكن لكل كتلة فك تشفير الوصول إلى مفاتيح التشفير والقيمة من المٌشفّر.
+
+دعونا نلقي نظرة على التعديلات التي نحتاج إلى إجرائها لتضمين إخفاء في طبقة الانتباه الذاتي لدينا. الحيلة مع الاهتمام الذاتي المقنع هي تقديم مصفوفة قناع بأخرى على القطر السفلي والأصفار أعلاه:
 
 ```
 import tensorflow as tf
@@ -1210,6 +1219,8 @@ array([[[1., 0., 0., 0.],
 ```
 
 Here we've used TensorFlow's `tf.linalg.band_part()` function to create the lower triangular matrix. Once we have this mask matrix, we can prevent each attention head from peeking at future tokens by using `tf.where()` to replace all the zeros with negative infinity:
+
+استخدمنا هنا الدالة `tf.linalg.band_part` لإنشاء المصفوفة المثلثية السفلية. بمجرد أن نحصل على مصفوفة القناع هذه، يمكننا منع كل رأس انتباه من النظر إلى الوحدات النصية المستقبلية، وذلك من خلال استخدام `tf.where` لاستبدال جميع الأصفار باللانهاية السالبة:
 
 ```
 import tensorflow as tf
@@ -1232,6 +1243,8 @@ tf.Tensor(
 ```
 
 By setting the upper values to negative infinity, we guarantee that the attention weights are all zero once we take the softmax over the scores because e^(-∞) = 0 (recall that softmax calculates the normalized exponential).
+
+من خلال تعيين القيم العليا على اللانهاية السالبة، نضمن أن تكون أوزان الانتباه كلها صفرية بمجرد أن نأخذ softmax على الدرجات، لأن *e^(-∞) = 0* (تذكر أن softmax دالة أسية).
 
 ```
 class Decoder(tf.keras.layers.Layer):
@@ -1397,6 +1410,8 @@ Now we have finished building the main components of the model!
 
 Now, after we have built the necessary ingredients, and tested them. We can build in safety our transformer model.
 
+بعد أن أعددنا المكونات الضرورية واختبرناها. يمكننا أن نبني بأمان نموذج المحولات الخاص بنا.
+
 ```
 import tensorflow as tf
 
@@ -1487,24 +1502,27 @@ class Transformer(tf.keras.Model):
         return config
 ```
 
-All are done, Let's go train our model!
+That's it, let's go prepare the training settings!
 
-<br>
+انتهى كل شيء، دعنا نذهب لتجهيز إعدادات التدريب!
+
 <br>
 
 ## End-to-end Transformer
 
 <br>
-<br>
+
 We will train the end-to-end Transformer model, which is responsible for mapping the source sequence and the target sequence to predict the target sequence one step ahead. This model seamlessly integrates the components we have developed: the Embedding layer, the Encoder, and the Decoder. Both the Encoder and the Decoder can be stacked to create more powerful versions as they maintain the same shape.
-<br>
+
+سنقوم بتدريب نموذج المحولات من البداية إلى النهاية، وهو المسؤول عن ربط السلسلة المصدر بما لديه حاليًا من السلسلة المستهدفة للتنبؤ بالكلمة التالية في التسلسل المستهدف. يدمج هذا النموذج بسلاسة المكونات التي طورناها: طبقة التضمين والتشفير وفك التشفير. يمكن تكديس طبقات التشفير وفك التشفير لإنشاء إصدارات أكثر قوة لأنها تُنتج نفس المخرجات وتستقبل نفس المدخلات.
+
 <br>
 
 ### The Schedular
 
-Before training the Transformer, we need to determine the training strategy. In accordance with the paper *Attention Is All You Need*, we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as learning rate warmup. This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence.
+Before training the Transformer, we need to determine the training strategy. In accordance with the paper "Attention Is All You Need", we will utilize the Adam optimizer with a custom learning rate schedule. One technique we will employ is known as "learning rate warmup". This technique gradually increases the learning rate during the initial iterations of training in order to enhance stability and accelerate convergence. During the warmup phase, the learning rate is increased in a linear manner or according to a specific schedule until it reaches a predefined value. The objective of this warmup phase is to enable the model to explore a wider range of solutions during the initial training phase when the gradients might be large and unstable. The specific formula for the learning rate warmup is as follows:
 
-During the warmup phase, the learning rate is increased in a linear manner or according to a specific schedule until it reaches a predefined value. The objective of this warmup phase is to enable the model to explore a wider range of solutions during the initial training phase when the gradients might be large and unstable. The specific formula for the learning rate warmup is as follows:
+قبل تدريب المحولات، نحتاج إلى تحديد استراتيجية التدريب. وفقًا للورقة البحثية "الانتباه هو كل ما تحتاجه"، سوف نستخدم مُحسِّن آدم مع مُجدّول معدل تعلُّم مُخصص. إحدى التقنيات التي سنستخدمها تُعرف باسم "إحماء معدل التعلم". تزيد هذه التقنية تدريجياً من معدل التعلم أثناء التكرارات الأولية للتدريب من أجل تعزيز الاستقرار وتسريع التقارب. خلال مرحلة الإحماء، يتم زيادة معدل التعلم بطريقة خطية أو وفقًا لجدول زمني محدد حتى يصل إلى قيمة محددة مسبقًا. الهدف من مرحلة الإحماء هذه هو تمكين النموذج من استكشاف نطاق أوسع من الحلول خلال مرحلة التدريب الأولية عندما تكون التدرجات كبيرة وغير مستقرة. الصيغة المحددة لتحمية معدل التعلم هي كما يلي:
 
 ```
 learning_rate = d_model^(-0.5) * min(step_num^(-0.5), step_num * warmup_steps^(-1.5))
@@ -1515,7 +1533,11 @@ Here, `d_model` represents the dimensionality of the model, `step_num` indicates
 1. **Large Gradient Magnitudes.** In the initial stages of training, the model parameters are randomly initialized, and the gradients can be large. If a high learning rate is applied immediately, it can cause unstable updates and prevent the model from converging. Warmup allows the model to stabilize by starting with a lower learning rate and gradually increasing it.
 2. **Exploration of the Solution Space.** The model needs to explore a wide range of solutions to find an optimal or near-optimal solution. A high learning rate at the beginning may cause the model to converge prematurely to suboptimal solutions. Warmup enables the model to explore the solution space more effectively by starting with a low learning rate and then increasing it to search for better solutions.
 
-Let's implement the scheduler:
+يمثل `d_model` أبعاد النموذج وتشير `step_num` إلى خطوة التدريب الحالية و `Warmup_steps` تشير إلى عدد خطوات الإحماء. بشكل نموذجي، يتم تعيين `Warmup_steps` على بضعة آلاف أو نسبة من إجمالي خطوات التدريب. الدافع وراء إحماء معدل التعلم هو مواجهة تحديين يحدثان غالبًا في بداية التدريب:
+
+1. **خطوات تدرّج كبيرة.** في المراحل الأولى من التدريب، تتم تهيئة معلمات النموذج بشكل عشوائي، بالتالي يمكن أن تكون التدرجات كبيرة. إذا تم تطبيق معدل تعليمي مرتفع على الفور، فقد يتسبب ذلك في حدوث تحديثات غير مستقرة ويمنع النموذج من التقارب. يسمح الإحماء للنموذج بالاستقرار من خلال البدء بمعدل تعلم أقل وزيادته تدريجيًا.
+2. **استكشاف فضاء الحل.** يحتاج النموذج إلى استكشاف مجموعة واسعة من الحلول للعثور على الحل الأمثل أو شبه الأمثل. قد يؤدي معدل التعلم المرتفع إلى الحصول على حلول أقل مما يمكن تحقيقه. يُمكّن إحماء النموذج من استكشاف فضاء الحل بشكل أكثر فاعلية من خلال البدء بمعدل تعلم منخفض ثم زيادته للبحث عن حلول أفضل.
+
 
 ```
 import tensorflow as tf
@@ -1567,6 +1589,8 @@ class LrSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
 
 This corresponds to increasing the learning rate linearly for the first `warmup_steps` training steps, and decreasing it thereafter proportionally to the inverse square root of the step number. You can see how the learning rate values change with each time step with the following code:
 
+هذا يتوافق مع زيادة معدل التعلم خطيًا لخطوات التدريب `warmup_steps` الأولى، وتقليلها بعد ذلك بالتناسب مع الجذر التربيعي العكسي لرقم الخطوة. يمكنك أن ترى كيف تتغير قيم معدل التعلم مع كل خطوة زمنية باستخدام الكود التالي:
+
 ```
 import matplotlib.pyplot as plt
 
@@ -1597,11 +1621,15 @@ plt.xlabel('Train Step')
 plt.show()
 ```
 
-By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule, which may involve decay or a fixed rate, for the remaining training iterations.
+By gradually increasing the learning rate during the warmup phase, the model can effectively explore the search space, adapt better to the training data, and ultimately converge to a more optimal solution. Once the warmup phase is completed, the learning rate follows its regular schedule for the remaining training iterations.
+
+من خلال زيادة معدل التعلم تدريجيًا خلال مرحلة الإحماء، يمكن للنموذج استكشاف فضاء البحث بشكل فعال، والتكيف بشكل أفضل مع بيانات التدريب، وفي النهاية التقارب إلى حل أكثر أمثلية. بمجرد اكتمال مرحلة الإحماء، يتبع معدل التعلم جدوله المعتاد لتكرارات التدريب المتبقية.
 
 ### Loss Function
 
 Next, we are required to specify the loss function for the training process. In this particular model, an additional step is needed where a mask is applied to the output. This mask ensures that the loss (and accuracy) calculations are performed only on the non-padding elements, disregarding any padded values:
+
+نحن مطالبون بتعريف دالة تكلفة لعملية التدريب. في هذا النموذج، هناك حاجة إلى خطوة إضافية تتجلى بتطبيق قناع على الخرج. يضمن هذا القناع إجراء حسابات الكلفة (والدقة كما سنرى لاحقًا) فقط على العناصر التي لا تُمثّل حشوًا:
 
 ```
 import tensorflow as tf
@@ -1636,7 +1664,9 @@ def scce_masked_loss(label, pred):
     return loss
 ```
 
-When we are getting talking about loss function, we must refer to the *Label Smoothing*. It's a regularization technique commonly used in deep learning models, particularly in classification tasks, to improve generalization and prevent the model from becoming overly confident in its predictions. It addresses the issue where a model may assign a probability close to 1 to the predicted class and 0 to all other classes, leading to overfitting and potential sensitivity to small perturbations in the input. Label smoothing introduces a small amount of uncertainty or noise into the training process by modifying the target (ground truth) labels. Instead of using one-hot encoded labels with a single element set to 1 and all others set to 0, label smoothing distributes the probability mass among multiple classes ([read more](https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). In empirical studies, the improvement in machine translation performance due to label smoothing is typically in the range of 0.5% to 2%. However, these numbers are not fixed and can vary based on different factors. For certain datasets or model architectures, the improvement might be more significant, while for others, it might be less noticeable. One of the main challenges with using one-hot encoding and label smoothing in machine translation tasks with large vocabularies is the high dimensionality of the one-hot encoded vectors. As the vocabulary size increases, the one-hot encoded vectors become very sparse, leading to memory and computational inefficiencies. Here, we are not going to use it because of the limitations in the sources that we have. However, you could try it easily just by replacing `SparseCategoricalCrossentropy` with [`CategoricalCrossentropy`](https://github.com/keras-team/keras/tree/v2.13.1//keras/losses.py#L837), using the `label_smoothing` parameter, and representing the target sentences with one-hot encoding. Here's how you can use technique:
+When we are getting talking about loss function, we must refer to the "Label Smoothing". It's a regularization technique commonly used in deep learning models, particularly in classification tasks, to improve generalization and prevent the model from becoming overly confident in its predictions. It addresses the issue where a model may assign a probability close to 1 to the predicted class and 0 to all other classes, leading to overfitting and potential sensitivity to small perturbations in the input. Label smoothing introduces a small amount of uncertainty or noise into the training process by modifying the target (ground truth) labels. Instead of using one-hot encoded labels with a single element set to 1 and all others set to 0, label smoothing distributes the probability mass among multiple classes ([read more](https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). In empirical studies, the improvement in machine translation performance due to label smoothing is typically in the range of 0.5% to 2%. However, these numbers are not fixed and can vary based on different factors. For certain datasets or model architectures, the improvement might be more significant, while for others, it might be less noticeable. One of the main challenges with using one-hot encoding and label smoothing in machine translation tasks with large vocabularies is the high dimensionality of the one-hot encoded vectors. As the vocabulary size increases, the one-hot encoded vectors become very sparse, leading to memory and computational inefficiencies. Here's how you can use technique:
+
+عندما نتحدث عن دالة الكلفة، يجب أن نشير إلى "توزيع التسمية الناعمة". إنها تقنية تنظيم مستخدمة بشكل شائع في نماذج التعلم العميق، لا سيما في مهام التصنيف، لتحسين التعميم ومنع النموذج من أن يصبح واثقًا بشكل مفرط في تنبؤاته. إنه يعالج المشكلة حيث قد يقوم النموذج بتعيين احتمال قريب من 1 للفئة المتوقعة و 0 لجميع الفئات الأخرى، مما يؤدي إلى الضبط المُفرط وربما الحساسية للتغيرات الصغيرة في المدخلات. يُدخل "توزيع التسمية الناعمة" قدرًا صغيرًا من عدم اليقين أو الضوضاء في عملية التدريب عن طريق تعديل تسميات الهدف (القيم الحقيقة). بدلاً من استخدام "تشفير القيمة الواحدة one-hot encoded" التي تتضمّن تحديد عنصر واحد على 1 وكل العناصر الأخرى على 0، يُوزع توزيع التسمية الناعمة الاحتمال على جميع الفئات ([اقرأ المزيد] (https://towardsdatascience.com/what-is-label-smoothing-108debd7ef06)). في الدراسات التجريبية، كان التحسن في أداء الترجمة الآلية بسبب توزيع التسمية الناعمة عادة في نطاق 0.5٪ إلى 2٪. ومع ذلك، فإن هذه الأرقام ليست ثابتة ويمكن أن تختلف بناءً على عوامل مختلفة. تبعًا لمجموعات البيانات أو هياكل النماذج، يكون التحسين أكثر أو أقل وضوحًا. تتمثل إحدى التحديات الرئيسية في استخدام توزيع التسمية الناعمة في مهام الترجمة الآلية -بعدد المفردات الكبير، والذي يُقابل أبعاد عالية لمتجاهات الخرج، مما يؤدي إلى قصور في الذاكرة والحساب. إليك كيف يمكنك استخدام التقنية:
 
 ```
 import tensorflow as tf
@@ -1677,6 +1707,8 @@ def cce_loss(label, pred):
 ### Metrics
 
 It's common to use masked accuracy with this task, so let's implement it:
+
+من الشائع استخدام الدقة المقنعة في هذه المهمة، لذلك دعونا نحققها:
 
 ```
 import tensorflow as tf
