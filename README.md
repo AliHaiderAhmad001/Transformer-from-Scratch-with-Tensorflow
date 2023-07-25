@@ -1749,23 +1749,33 @@ def masked_accuracy(label, pred):
 
 However, it's important to note that accuracy alone may not provide a complete picture of translation quality. Translation evaluation often requires the use of specialized metrics like *BLEU*, *METEOR*, *ROUGE*, or *CIDEr*, which consider the quality, fluency, and semantic similarity of the translations compared to reference translations. These metrics take into account various aspects of translation such as word choice, word order, and overall coherence. Therefore, while the `masked_accuracy` function can be used as a basic measure of accuracy, it is advisable to complement it with established translation evaluation metrics for a more comprehensive assessment of translation quality.
 
+ومع ذلك، من المهم ملاحظة أن الدقة وحدها قد لا توفر صورة كاملة لجودة الترجمة. غالبًا ما يتطلب تقييم الترجمة استخدام مقاييس متخصصة مثل *BLEU* أو *METEOR* أو *ROUGE* أو *CIDEr*، والتي تأخذ في الاعتبار الجودة والطلاقة والتشابه الدلالي للترجمات مقارنة بالترجمات المرجعية. تأخذ هذه المقاييس في الاعتبار الجوانب المختلفة للترجمة مثل اختيار الكلمات وترتيب الكلمات والترابط العام. لذلك، في حين يمكن استخدام دالة "الدقة المقنعة" كمقياس أساسي للدقة، فمن المستحسن استكمالها بمقاييس تقييم الترجمة الأخرى للحصول على تقييم أكثر شمولاً لجودة الترجمة.
 <br>
 
-BLEU (Bilingual Evaluation Understudy) is another metric used to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field.
+**BLEU (Bilingual Evaluation Understudy).** is a metric to evaluate the quality of machine translation output by comparing it to one or more reference translations. It was proposed as an automatic evaluation metric for machine translation systems and is widely used in the natural language processing (NLP) field. The BLEU metric works by comparing the n-grams (contiguous sequences of n words) of the candidate translation (output) to the n-grams of the reference translations (ground truth). It calculates a precision score for each n-gram and then combines the scores using a modified geometric mean, giving more weight to shorter n-grams. BLEU ranges from 0 to 1, with 1 being a perfect match with the reference translations ([read more](https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)).
 
-The BLEU metric works by comparing the n-grams (contiguous sequences of n words) of the candidate translation (output) to the n-grams of the reference translations (ground truth). It calculates a precision score for each n-gram and then combines the scores using a modified geometric mean, giving more weight to shorter n-grams. BLEU ranges from 0 to 1, with 1 being a perfect match with the reference translations ([read more](https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)).
+
+**المعيار BLEU.** هو مقياس يستخدم لتقييم جودة مخرجات الترجمة الآلية من خلال مقارنتها بترجمة مرجعية واحدة أو أكثر. تم اقتراحه كمقياس تقييم تلقائي لأنظمة الترجمة الآلية ويستخدم على نطاق واسع في مجال معالجة اللغة الطبيعية (NLP). يعمل مقياس BLEU من خلال مقارنة n-grams (متواليات متجاورة لعدد n من الكلمات) للترجمة المرشحة (المخرجات) إلى n-grams الترجمات المرجعية (الترجمة النموذجية). يحسب مقياس BLEU درجة الدقة لكل نهج، ثم يجمع الدرجات باستخدام المتوسط الهندسي المعدل، مُعطيًا وزنًا أكبر للنُهُج الأقصر. يتراوح مقياس BLEU من 0 إلى 1، حيث يُعتبر القيمة 1 تطابقًا مثاليًا مع الترجمات المرجعية ([اقرأ المزيد](https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)). ([اقرأ المزيد] (https://machinelearningmastery.com/calculate-bleu-score-for-text-python/)).
 
 Here's how the BLEU metric is calculated:
 
 1. Calculate the n-gram precision for each n-gram size (usually up to 4-grams):
    - Count the number of n-grams in the candidate translation that appear in the reference translations.
    - Count the total number of n-grams in the candidate translation.
-
 2. Calculate the brevity penalty to account for translations that are shorter than the references. This penalizes overly short translations that can achieve high precision but may not cover the full meaning of the input.
-
 3. Combine the n-gram precisions using a modified geometric mean. The modified version addresses the issue of penalizing translations that have zero precision for a certain n-gram size. It replaces zero precisions with the lowest non-zero precision.
-
 4. Multiply the combined n-gram precisions by the brevity penalty to get the final BLEU score.
+
+
+إليك كيف يتم حساب مقياس BLEU:
+
+1. احسب دقة الـ n-gram لكل حجم n-gram (عادة حتى الـ 4-gram):
+   - عد الـ n-grams في الترجمة المرشحة التي تظهر في الترجمات المرجعية.
+   - عد إجمالي عدد الـ n-grams في الترجمة المرشحة.
+2. احسب عقوبة الإختصار في الترجمة. هذا يعاقب الترجمات القصيرة للغاية التي يمكن أن تحقق دقة عالية ولكنها قد لا تغطي المعنى الكامل للإدخال.
+3. دمج دقة الـ n-gram باستخدام المتوسط الهندسي المعدل. النسخة المعدلة تعالج مشكلة معاقبة الترجمات التي لديها دقة صفر لحجم معين من الـ n-grams. تستبدل النسخة المعدلة الدقة الصفر بأقل دقة غير صفرية.
+4. ضرب دقة الـ n-gram المدمجة بعقوبة الإختصار للحصول على نتيجة BLEU النهائية.
+
 
 ```
 import tensorflow as tf
@@ -1863,9 +1873,17 @@ However, it also has some limitations, such as sensitivity to sentence length an
 
 **Note:** This implementation you can use it to test the performance of the model later, but you can't use it during training, it needs somewhat boring modifications in order to comply with Tensorflow's operations. So if you want to use it, it is better to experience the implementation of the [Keras_nlp](https://keras.io/api/keras_nlp/metrics/bleu/) package.
 
+ومع ذلك، BELU يحتوي أيضًا على بعض القيود، مثل الحساسية لطول الجملة وحقيقة أنه يعتمد فقط على مطابقة n-gram دون النظر إلى المعنى الدلالي. نتيجة لذلك، غالبًا ما يستخدم الباحثون مقاييس تقييم متعددة، بما في ذلك BLEU، للحصول على فهم أكثر شمولاً لأداء نظام الترجمة.
+
+**ملاحظة:** هذا التطبيق يمكنك استخدامه لاختبار أداء النموذج لاحقًا، لكن لا يمكنك استخدامه أثناء التدريب، فهو يحتاج إلى تعديلات مُملّة إلى حد ما من أجل التوافق مع عمليات Tensorflow. لذلك إذا كنت ترغب في استخدامه، فمن الأفضل تجربة التحقيق الذي توفره حزمة [Keras_nlp] (https://keras.io/api/keras_nlp/metrics/bleu/).
+
 <br>
 
 ### Callbacks
+
+Now, we define the callbacks needed to control the training process, such as early stopping when the model starts to overfit and saving the model with each improvement it makes.
+
+نقوم الآن بتعريف ردود الاتصال اللازمة للتحكم في عملية التدريب، مثل التوقف المبكر عند بدء النموذج بالإفراط بالتجهيز وحفظ النموذج مع كل تحسن يحققه.
 
 ```
 import tensorflow as tf
@@ -1918,6 +1936,10 @@ class TransformerCallbacks(tf.keras.callbacks.Callback):
 
 ### Configuration
 
+This configuration class holds various attributes that control the architecture and training of the Transformer model.
+
+تحمل فئة التكوين هذه واصفات مختلفة تتحكم في بنية النموذج وتدريبه.
+
 ```
 class Config:
     def __init__(self):
@@ -1959,7 +1981,11 @@ class Config:
         self.patience = 3
 ```
 
-### Monitor
+### Training
+
+Now that everything is ready, we can now train the model. Model hyperparameters can be changed, depending on the resources you have. So feel free with modify it as you want to get better performance.
+
+بعد أن أصبح كل شيئ جاهز، يمكننا الآن تدريب النموذج. معاملات النموذج يمكن ضبطها بشكل أفضل، تبعًا للموارد التي لديك. لذا يمكنك تعديلها كما يحلو لك للحصول على أداء أفضل.
 
 ```
 import tensorflow as tf
@@ -2000,7 +2026,18 @@ history = transformer.fit(
 )
 ```
 
+<br>
+
 ## Inference
+
+In the data preprocessing stage, we divided the original dataset into three subsets: training, validation, and test sets, in the proportions of 70%, 15%, and 15%, respectively. During the model training process, we utilized the training and validation datasets to train the Transformer model. Now, we will use the test set to evaluate the performance of our trained model. To facilitate model loading, we saved the Transformer model in the previously. Due to the presence of custom-made layers and functions in the model, we need to create a custom object scope to successfully load our saved model. When the Transformer model processes input data, it provides us with token indices. To obtain the corresponding words represented by these indices, we require the vectorizer used during dataset creation. By reusing the same vectorizer, we ensure consistency in the token-to-word mappings.
+
+We do not use the model to generate the entire translated sentence at once; we pridict the target language words one by one, starting from the special token called the "start sentinel" token. The "start sentinel" token acts as an indicator for the model to begin generating the translation. Once we have the first word, we feed it back into the model along with the "start sentinel" token as input to predict the second word in the translation. We repeat this process until we encounter the "end sentinel" token in the model's output. This approach is essential because in neural machine translation, each word in the translated sentence depends on the previous words. The iterative generation process allows the model to maintain coherence and context throughout the translation, providing more accurate and meaningful translations compared to generating the entire sentence at once.
+
+اتفي مرحلة المعالجة المسبقة للبيانات، قسمنا مجموعة البيانات الأصلية إلى ثلاث مجموعات فرعية: مجموعات التدريب والتحقق والاختبار بنسب 70٪ و 15٪ و 15٪ على التوالي. أثناء عملية التدريب، استخدمنا مجموعات بيانات التدريب والتحقق من الصحة لتدريب نموذج المحولات. الآن، سوف نستخدم مجموعة الاختبار لتقييم أداء نموذجنا المدرب. لتسهيل تحميل النموذج، قمنا بحفظ النموذج سابقًا. نظرًا لوجود طبقات ودوال مخصصة في النموذج، نحتاج إلى إنشاء نطاق مخصص لتحميل النموذج المحفوظ بنجاح. عندما يعالج النموذج بيانات الإدخال، فإنه يوفر لنا فهارس الوحدات النصية. للحصول على الكلمات المقابلة التي تمثلها هذه الفهارس، نحتاج إلى أداة التوجيه المستخدمة أثناء إنشاء مجموعة البيانات. من خلال إعادة استخدام نفس الموجّه، نضمن الاتساق في عملية الربط بين الوحدات النصية والكلمات.
+
+لا نستخدم النموذج لتوليد الجملة المترجمة بالكامل مرة واحدة؛ نتوقع كلمات اللغة المستهدفة واحدة تلو الأخرى، بدءًا من رمز بداية الجملة، الذي يعمل كمؤشر للنموذج لبدء إنشاء الترجمة. بمجرد أن نحصل على الكلمة الأولى، نعيد إدخالها في النموذج جنبًا إلى جنب مع رمز البداية للتنبؤ بالكلمة الثانية في الترجمة، ونستمر في هذه العملية حتى نحصل على رمز نهاية الجملة، الذي يشير إلى انتهاء الترجمة. هذا النهج ضروري لأنه في الترجمة الآلية العصبية، تعتمد كل كلمة في الجملة المترجمة على الكلمات السابقة. تسمح عملية التوليد التكراري للنموذج بالحفاظ على الترابط والسياق في جميع أنحاء الترجمة، مما يوفر ترجمات أكثر دقة وذات مغزى مقارنة بتوليد الجملة بأكملها في وقت واحد.
+
 
 ```
 import pickle
@@ -2120,6 +2157,28 @@ for n in range(test_count):
 ```
 ```
 Output:
-
+Test 2:
+it rained for three days .
+== [start] il a plu pendant trois jours . [end]
+-> [start] il a plu pendant trois jours . [end]
+ 
+Test 3:
+two people say they heard a gunshot .
+== [start] deux personnes disent qu'elles ont entendu une détonation . [end]
+-> [start] deux personnes disent qu'ils ont entendu un coup de feu . [end]
+ 
+Test 4:
+i'm not dead yet .
+== [start] je ne suis pas encore mort . [end]
+-> [start] je ne suis pas encore mort . [end]
 ```
+
+<br>
+
 ## Conclusion
+
+After weeks of hard work and dedication, I have successfully realized a powerful Transformer model from scratch for the task of machine translation, specifically from English to French. The journey began with understanding the fundamental concepts behind the Transformer architecture, including self-attention mechanisms and positional encodings.
+
+I meticulously constructed each component of the model, designing custom layers for embeddings, encoders, and decoders. Every detail, from the number of attention heads to the hidden layer sizes, was carefully chosen to optimize the model's performance. I split the dataset into training, validation, and test sets, allocating 70% for training and 15% each for validation and testing. I fine-tuned the model's parameters using the Adam optimizer with a custom learning rate schedule.
+
+بعد أسابيع من العمل الجاد، نجحت في تحقيق نموذج المحوّلات من الصفر لمهمة الترجمة الآلية، وتحديداً من الإنجليزية إلى الفرنسية. بدأت الرحلة بفهم المفاهيم الأساسية وراء بنية المحولات، بما في ذلك آليات الانتباه الذاتي والتشفير الموضعي. لقد قمت ببناء كل مكون من مكونات النموذج بدقة، وتصميم طبقات مخصصة للتضمينات والتشفير وفك التشفير. كل التفاصيل، من عدد رؤوس الانتباه إلى أحجام الطبقة المخفية، تم اختيارها بعناية لتحسين أداء النموذج. لقد قسمت مجموعة البيانات إلى مجموعات تدريب وتحقق واختبار، وخصصت 70٪ للتدريب و 15٪ لكل منا التحقق (المراقبة) والاختبار. لقد قمت بضبط معلمات النموذج باستخدام مُحسِّن آدم مع جدول معدل تعلم مخصص.
