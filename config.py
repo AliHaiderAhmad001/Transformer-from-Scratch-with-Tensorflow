@@ -19,9 +19,10 @@ class Config:
             num_blocks: Number of encoder and decoder blocks in the transformer.
             final_dropout_prob: Dropout probability for the final output.
             epochs: Number of epochs for training.
-            checkpoint_filepath: Filepath for saving model checkpoints.
             patience: Number of epochs with no improvement after which training will be stopped.
-
+            checkpoint_filepath: Filepath for saving model checkpoints.
+            vectorizers_path: Filepath for saving vectorizers.
+            dataset_path: Filepath for dataset.
         """
         self.sequence_length = 60
         self.hidden_size = 256
@@ -36,5 +37,8 @@ class Config:
         self.num_blocks = 2
         self.final_dropout_prob = 0.5
         self.epochs = 30
-        self.checkpoint_filepath = 'tmp/checkpoint'
         self.patience = 3
+        self.checkpoint_filepath = 'tmp/checkpoint'
+        self.vectorizers_path = 'tmp/vectorize.pickle'
+        self.dataset_path = "dataset/fra.txt"
+        
