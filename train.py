@@ -1,4 +1,5 @@
 # train.py
+import random
 import tensorflow as tf
 from config import Config
 from transformer import Transformer
@@ -9,9 +10,9 @@ from metrics import masked_accuracy
 from data_preprocessing import prepare_dataset, format_dataset, make_dataset
 from vectorizer import create_vectorizers, save_vectorizers
 
-text_file = "dataset/fra.txt"
 
 config = Config()
+text_file = config.dataset_path
 
 # Prepare the dataset
 text_pairs = prepare_dataset(text_file)
@@ -36,9 +37,9 @@ fra_vectorizer.adapt(train_fra_texts)
 save_vectorizers(eng_vectorizer, fra_vectorizer)
 
 # Make datasets
-train_ds = make_dataset(train_pairs, eng_vectorizer, fra_vectorizer)
-val_ds = make_dataset(val_pairs, eng_vectorizer, fra_vectorizer)
-test_ds = make_dataset(test_pairs, eng_vectorizer, fra_vectorizer)
+train_ds = make_dataset(train_pairs)
+val_ds = make_dataset(val_pairs)
+test_ds = make_dataset(test_pairs)
 
 
 # Create the Transformer model
