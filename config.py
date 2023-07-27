@@ -36,5 +36,5 @@ class Config:
         self.num_blocks = 2
         self.final_dropout_prob = 0.5
         self.epochs = 30
-        self.checkpoint_filepath = '/content/drive/MyDrive/Colab Notebooks/NMT/tmp/checkpoint'
+        self.checkpoint_filepath = 'tmp/checkpoint'
         self.patience = 3
