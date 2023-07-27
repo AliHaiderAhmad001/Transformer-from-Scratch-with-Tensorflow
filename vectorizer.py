@@ -33,7 +33,7 @@ def create_vectorizers(config):
     return eng_vectorizer, fra_vectorizer
 
 
-def save_vectorizers(eng_vectorizer, fra_vectorizer, save_path="temp/vectorize.pickle"):
+def save_vectorizers(eng_vectorizer, fra_vectorizer, save_path="tmp/vectorize.pickle"):
     """
     Save the English and French vectorizers to a pickle file.
 
@@ -52,8 +52,8 @@ def save_vectorizers(eng_vectorizer, fra_vectorizer, save_path="temp/vectorize.p
     with open(save_path, "wb") as fp:
         pickle.dump(data, fp)
 
-def load_vectorizers(file="temp/vectorize.pickle"):
-    with open(file, "rb") as fp:
+def load_vectorizers(file_path="tmp/vectorize.pickle"):
+    with open(file_path, "rb") as fp:
         data = pickle.load(fp)
 
     eng_vectorizer = tf.keras.layers.TextVectorization.from_config(data["engvec_config"])
