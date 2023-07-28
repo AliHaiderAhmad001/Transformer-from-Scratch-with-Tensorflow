@@ -81,3 +81,6 @@ pip install -r requirements.txt
 If you find some bug or typo, please let me know or fix it and push it to be analyzed.
 
 ## License
+
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/AliHaiderAhmad001/Neural-Machine-Translator/blob/main/LICENSE.txt) file for details.
+
