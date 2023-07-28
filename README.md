@@ -8,7 +8,7 @@ The Transformer model is a state-of-the-art neural network architecture designed
 
 ## Features
 
-- Implementation of the Transformer model from scratch in TensorFlow 2.x.
+- Implementation of the Transformer model from scratch in TensorFlow 2.
 - Training the model on a dataset of English-French sentence pairs.
 - Custom positional encodings, attention mechanisms and etc.
 - Learning rate schedule with warmup for training.
