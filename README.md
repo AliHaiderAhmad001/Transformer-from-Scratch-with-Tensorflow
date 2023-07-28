@@ -20,8 +20,8 @@ The implementation of the Transformer model is based on the paper "Attention is 
 
 ## Requirements
 
-- Python 3.x
-- TensorFlow 2.x
+- Python 3.10.6
+- TensorFlow 2.12.0
 
 ## Installation
 
