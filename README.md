@@ -16,7 +16,7 @@ The Transformer model is a state-of-the-art neural network architecture designed
 - Inferance.
 
 ## Credits
-The implementation of the Transformer model is based on the paper "Attention is All You Need" by Vaswani et al. The code in this repository is developed by [Your Name] and is for educational purposes.
+The implementation of the Transformer model is based on the paper "Attention is All You Need" by Vaswani et al. The code in this repository is developed by Ali Haidar Ahmad and is for educational purposes.
 
 ## Requirements
 
