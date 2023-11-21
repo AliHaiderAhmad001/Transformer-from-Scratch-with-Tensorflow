@@ -9,8 +9,6 @@ from vectorizer import load_vectorizers
 
 config = Config()
 
-eng_vectorizer, fra_vectorizer = load_vectorizers(config.vectorizers_path)
-
 def normalize(line):
     """
     Normalize a line of text and split into two at the tab character
@@ -52,25 +50,6 @@ def prepare_dataset(text_file):
     return text_pairs
 
 
-def format_dataset(eng, fra):
-    """
-    Formats the dataset by applying vectorization and preparing the inputs for the encoder and decoder.
-
-    Args:
-        eng: English text tensor.
-        fra: French text tensor.
-
-    Returns:
-        Tuple of formatted inputs for the encoder and decoder.
-    """
-    eng = eng_vectorizer(eng)
-    fra = fra_vectorizer(fra)
-    return (
-        {"encoder_inputs": eng, "decoder_inputs": fra[:, :-1]},
-        fra[:, 1:]
-    )
-
-
 def make_dataset(pairs, batch_size=64):
     """
     Creates a dataset from pairs of English and French texts.
@@ -82,6 +61,25 @@ def make_dataset(pairs, batch_size=64):
     Returns:
         Formatted and preprocessed dataset.
     """
+    eng_vectorizer, fra_vectorizer = load_vectorizers(config.vectorizers_path)
+
+    def format_dataset(eng, fra):
+        """
+        Formats the dataset by applying vectorization and preparing the inputs for the encoder and decoder.
+
+        Args:
+            eng: English text tensor.
+            fra: French text tensor.
+
+        Returns:
+            Tuple of formatted inputs for the encoder and decoder.
+        """
+        eng = eng_vectorizer(eng)
+        fra = fra_vectorizer(fra)
+        return (
+            {"encoder_inputs": eng, "decoder_inputs": fra[:, :-1]},
+            fra[:, 1:]
+        )
     eng_texts, fra_texts = zip(*pairs)
     eng_texts = list(eng_texts)
     fra_texts = list(fra_texts)
