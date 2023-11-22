@@ -19,7 +19,7 @@ class Embeddings(tf.keras.layers.Layer):
     """
 
     def __init__(self, config, vocab_size, name = None,  **kwargs):
-        super(Embeddings, self).__init__(name = name, **kwargs))
+        super(Embeddings, self).__init__(name = name, **kwargs)
         self.token_embeddings = tf.keras.layers.Embedding(
             input_dim= vocab_size, output_dim=config.hidden_size
         )
