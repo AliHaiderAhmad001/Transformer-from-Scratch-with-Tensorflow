@@ -52,8 +52,8 @@ class Transformer(tf.keras.Model):
         source_inputs = inputs["encoder_inputs"]
         target_inputs = inputs["decoder_inputs"]
 
-        x_enc = self.enc_embed_layer(source_inputs)
-        x_dec = self.dec_embed_layer(target_inputs)
+        x_enc = self.enc_embed_layer(source_inputs, training=training)
+        x_dec = self.dec_embed_layer(target_inputs, training=training)
 
         for encoder_layer in self.encoder:
             x_enc = encoder_layer(x_enc, training=training)
