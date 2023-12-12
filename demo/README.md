@@ -12,9 +12,10 @@ The Transformer architecture is a popular model architecture used for various na
 المحولات هي بنية نموذجية شائعة تستخدم في العديد من مهام معالجة اللغة الطبيعية، بما في ذلك الترجمة الآلية وتوليد النص وفهم اللغة. تم تقديمها بواسطة Vaswani et al. في مقالة "الانتباه هو كل ما تحتاجه". تتكون بنية المحول من مكونين رئيسيين: المشفر ووحدة فك التشفير. يتكون كل من المشفر ومفكك التشفير من طبقات متعددة من الاهتمام الذاتي والشبكات العصبية ذات التغذية الأمامية. الفكرة الرئيسية وراء المحول هي استخدام آليات الانتباه الذاتي، والتي تسمح للنموذج بالتركيز على أجزاء مختلفة من سلسلة الدخل عند إنشاء سلسلة الخرج. في الشكل التالي نظرة عامة عالية المستوى على بنية المحولات.
 <br>
 <br>
-![Transformer architecture](imgs/transformer_arch.png "Transformer architecture")
+![Transformer architecture](imgs/transformer_arch.png)
 <br>
 <br>
+
 * **Encoder.** The input sequence is first passed through an embedding layer, which maps each token to a continuous vector representation -followed by positional encoding to provide information about the position of tokens in the sequence. The embedded input is then processed by a stack of identical encoder layers. Each encoder layers consists of a multi-head self-attention mechanism, followed by a feed-forward neural network. The self-attention mechanism allows the *encoder* to attend to different positions in the input sequence and capture dependencies between tokens. The output of the encoder is a set of encoded representations for each token in the input sequence.
 
 تُمرّر سلسلة الدخل إلى طبقة تضمين تقوم بربط كل وحدة نصية (كلمات في حالتنا) بشعاع رقمي يُمثّلها مكون من قيم مستمرة (أعداد حقيقية). يتبع ذلك ترميّز موضعي يهدف إلى تقديم معلومات حول مواقع الوحدات النصية ضمن سلسلة الدخل. تجري معالجة هذه التضمينات بعد ذلك من خلال طبقات المشفّر المتماثلة. كل طبقة تشفير تتألف من طبقة انتباه ذاتي متعدد الرؤوس متبوعة بطبقة تغذية أمامية. تسمح آلية الانتباه الذاتي للمشفّر بمشاهدة المواقع المختلفة لسلسلة الدخل، والتقاط التبعيات بين الوحدات النصية. أي بمعنى آحر، تسمح له بمعرفة مدى ارتباط كل كلمة مع الكلمات الأخرى. خرج المشفّر هو تمثيّل جديد لكل وحدة نصيّة من سلسلة الدخل.
@@ -38,7 +39,7 @@ The following figure shows encoder-decoder architecture of the transformer, with
 يوضّح الشكل التالي بنية المُشفّر-فك التشفير في المحوّل، حيث يبيّن النصف العلوي من الشكل بنية المُشفّر، ووحدة فك التشفير في النصف السفلي. تجدر الإشارة إلا أن هذا الشكل يمثل "مرحلة الاستدلال"، حيث أن آلية فك التشفير في مرحلة الاستدلال تختلف قليلاً عن مرحلة التدريب، وسنفهم ذلك لاحقًا عند مناقشة مرحلة التدريب والاستدلال.
 <br>
 <br>
-![Encoder-decoder examble](imgs/Transformer.png "Encoder-decoder examble")
+![Encoder-decoder examble](imgs/Transformer.png)
 <br>
 <br>
 
@@ -122,9 +123,9 @@ Numper of token in english sequences: 14969
 Numper of token in french sequences: 29219
 ```
     
-Now, we need to write a function that associates each token with a unique integer number representing it to get what is called a *Tokens_IDs*. Fortunately, there is a layer in TensorFlow called [`TextVectorization`](https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) that makes life easier for us. We'll use two instances of the TextVectorization to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
+Now, we need to write a function that associates each token with a unique integer number representing it to get what is called a *Tokens_IDs*. Fortunately, there is a layer in TensorFlow called [TextVectorization](https://www.tensorflow.org/api_docs/python/tf/keras/layers/TextVectorization) that makes life easier for us. We'll use two instances of the TextVectorization to vectorize the text data (one for English and one for Spanish). First of all, let's split the sentence pairs into a training set, a validation set, and a test set:
 
- نحتاج الآن إلى كتابة دالة تربط كل وحدة نصية برقم صحيح فريد يمثلها للحصول على ما يسمى *Tokens_IDs*. لحسن الحظ هناك طبقة في TensorFlow تسمى [`TextVectorization`] (https://keras.io/api/layers/preprocessing_layers/core_preprocessing_layers/text_vectorization/) تجعل الأمور أسهل بالنسبة لنا. سنستخدم كائنين من `TextVectorization` لتوجيه (التحويل لمصفوفات) البيانات النصية (أحدهما للغة الإنجليزية والآخر للغة الإسبانية). بدايةً نقسم أزواج الجمل إلى مجموعة تدريب ومجموعة مراقبة ومجموعة اختبار:
+ نحتاج الآن إلى كتابة دالة تربط كل وحدة نصية برقم صحيح فريد يمثلها للحصول على ما يسمى *Tokens_IDs*. لحسن الحظ هناك طبقة في TensorFlow تسمى [TextVectorization](https://www.tensorflow.org/api_docs/python/tf/keras/layers/TextVectorization) تجعل الأمور أسهل بالنسبة لنا. سنستخدم كائنين من `TextVectorization` لتوجيه (التحويل لمصفوفات) البيانات النصية (أحدهما للغة الإنجليزية والآخر للغة الإسبانية). بدايةً نقسم أزواج الجمل إلى مجموعة تدريب ومجموعة مراقبة ومجموعة اختبار:
 
 ```
 random.shuffle(text_pairs)
