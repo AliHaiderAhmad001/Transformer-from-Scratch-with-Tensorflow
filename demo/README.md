@@ -675,85 +675,37 @@ class Embeddings(tf.keras.layers.Layer):
 Testing:
 
 ```
-import tensorflow as tf
+# Define the configuration
+class Config:
+    def __init__(self):
+        self.sequence_length = 4
+        self.source_vocab_size = 14969
+        self.target_vocab_size = 29219
+        self.hidden_size = 4
+        self.frequency_factor = 10000
+        self.max_position_embeddings = 4
+        self.positional_information_type = 'embs'
+        self.source_vocab_size = 10
+        self.target_vocab_size = 10
+        self.hidden_dropout_prob = 0.1
 
-class Embeddings(tf.keras.layers.Layer):
-    """
-    Embeddings layer.
 
-    This layer combines token embeddings with positional embeddings to create the final embeddings.
+config = Config()
 
-    Args:
-        config (object): Configuration object containing parameters.
-        vocab_size: Vocabulary size.
+# Create an instance of the Embeddings layer
+Embeddings_layer = Embeddings(config, vocab_size = 10)
 
-    Attributes:
-        token_embeddings (tf.keras.layers.Embedding): Token embedding layer.
-        PositionalInfo (tf.keras.layers.Layer): Positional information layer.
-        dropout (tf.keras.layers.Dropout): Dropout layer for regularization.
-        norm (tf.keras.layers.LayerNormalization): Layer normalization for normalization.
-    """
+# Create a sample input tensor with token IDs
+batch_size = 1
+seq_length = 4
+input_ids = tf.random.uniform((batch_size, seq_length), maxval=config.sequence_length, dtype=tf.int32)
 
-    def __init__(self, config, vocab_size, name = None,  **kwargs):
-        super(Embeddings, self).__init__(name = name)
-        super(Embeddings, self).__init__(**kwargs)
-        self.token_embeddings = tf.keras.layers.Embedding(
-            input_dim= vocab_size, output_dim=config.hidden_size
-        )
-        if config.positional_information_type == 'embs':
-            self.PositionalInfo = PositionalEmbeddings(config)
-        elif config.positional_information_type == 'sinu':
-            self.PositionalInfo = SinusoidalPositionalEncoding(config)
+# Apply positional encodings
+output_embeddings = Embeddings_layer(input_ids)
 
-        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
-        self.norm = tf.keras.layers.LayerNormalization()
-
-    def call(self, input_ids, training=False):
-        """
-        Generate embeddings for input IDs.
-
-        Args:
-            input_ids (tf.Tensor): Input tensor containing token IDs.
-            training (bool, optional): Whether the model is in training mode. Defaults to False.
-
-        Returns:
-            tf.Tensor: Embeddings tensor of shape (batch_size, seq_length, hidden_size).
-        """
-        positional_info = self.PositionalInfo(input_ids)
-        x = self.token_embeddings(input_ids)
-        x += positional_info
-        x = self.norm(x)
-        x = self.dropout(x, training=training)
-        return x
-
-    def compute_mask(self, inputs, mask=None):
-        """
-        Computes the mask for the inputs.
-
-        Args:
-            inputs (tf.Tensor): Input tensor.
-            mask (tf.Tensor, optional): Mask tensor. Defaults to None.
-
-        Returns:
-            tf.Tensor: Computed mask tensor.
-        """
-        return tf.math.not_equal(inputs, 0)
-
-    def get_config(self):
-        """
-        Get the layer configuration.
-
-        Returns:
-            dict: Dictionary containing the layer configuration.
-        """
-        config = super().get_config()
-        config.update({
-            "token_embeddings": self.token_embeddings,
-            "PositionalInfo": self.PositionalInfo,
-            "dropout": self.dropout,
-            "norm": self.norm,
-        })
-        return config
+# Print the output positional embeddings
+print("Outputs:")
+print(output_embeddings)
 ```
 ```
 Outputs:
