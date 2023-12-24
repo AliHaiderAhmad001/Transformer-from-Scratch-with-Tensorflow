@@ -362,7 +362,7 @@ The most commonly used method for positional encoding in transformers is the sin
 
 Where `PE(pos, 2i)` represents the `i-th` dimension of the positional encoding for the token at position `pos`, and `d_model` is the dimensionality of the model.
 
-الطريقة الأكثر استخدامًا لتشفير الموضع في المحولات هي التشفير الموضعي الساينوسي (الجيبي)، كما تم تقديمه في ورقة "الانتباه هو كل ما تحتاجه" بواسطة فاسواني وآخرون. يعتمد التشفير الموضعي الساينوسي على فكرة أنه يمكن تمثيل المواضع المختلفة باستخدام مجموعة من الدوال الجيبية والتكسيرية ذات الترددات المختلفة. تتمثل الصيغة الرسمية للتشفير الموضعي الساينوسي كما في المعادلة أعلاه، حيث يُمثل `PE(pos, 2i)` البُعد `i` للتشفير الموضعي للرمز في الموضع `pos`، و `d_model` هي بُعد النموذج.
+الطريقة الأكثر استخدامًا لتشفير الموضع في المحولات هي التشفير الموضعي الساينوسي (الجيبي)، كما تم تقديمه في ورقة "الانتباه هو كل ما تحتاجه" بواسطة فاسواني وآخرون. يعتمد التشفير الموضعي الساينوسي على فكرة أنه يمكن تمثيل المواضع المختلفة باستخدام مجموعة من دوال الساين والكوساين بترددات مختلفة. تتمثل الصيغة الرسمية للتشفير الموضعي الساينوسي كما في المعادلة أعلاه، حيث يُمثل `PE(pos, 2i)` البُعد `i` للتشفير الموضعي للرمز في الموضع `pos`، و `d_model` هي بُعد النموذج.
 
 ```
 import tensorflow as tf
@@ -481,7 +481,7 @@ tf.Tensor(
 
 By using sinusoidal positional encoding, the model can differentiate between tokens based on their positions in the input sequence. This allows the transformer to capture sequential information and attend to different parts of the sequence appropriately. It's important to note that positional encoding is added as a fixed representation and is not learned during the training process. The model learns to incorporate the positional information through the attention mechanism and the subsequent layers of the transformer.
 
-باستخدام التشفير الموضعي الجيبي، يمكن للنموذج التفريق بين الكلمات بناءً على مواقعها في تسلسل الإدخال. هذا يسمح للمحول بالتقاط المعلومات المتسلسلة والاهتمام بأجزاء مختلفة من التسلسل. من المهم ملاحظة أن التشفير الموضعي يُضاف كتمثيل ثابت ولا يتم تعلّمه أثناء عملية التدريب. يتعلم النموذج دمج المعلومات الموضعية من خلال آلية الانتباه والطبقات اللاحقة للمحول.
+باستخدام التشفير الموضعي الجيبي، يمكن للنموذج التفريق بين الكلمات بناءً على مواقعها في تسلسل الإدخال. هذا يسمح للمحول بالتقاط المعلومات المتسلسلة والاهتمام بأجزاء مختلفة من التسلسل. من المهم ملاحظة أن التشفير الموضعي الجيبي يُضاف كتمثيل ثابت ولا يتم تعلّمه أثناء عملية التدريب. يتعلم النموذج دمج المعلومات الموضعية من خلال آلية الانتباه والطبقات اللاحقة للمحول.
 
 #### Learned Positional Embeddings
 
