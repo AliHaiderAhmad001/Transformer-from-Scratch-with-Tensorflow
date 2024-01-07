@@ -2,6 +2,13 @@
 
 This repository contains an implementation of the Transformer model, as described in the paper "Attention is All You Need" by Vaswani et al., for the task of machine translation from English to French.
 
+-----------
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/Platform-Ubuntu-orange.svg)](https://www.ubuntu.com/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.1-red.svg)](https://pytorch.org/)
+![Transformers](https://img.shields.io/badge/transformers-4.36-yellow.svg)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+
 ## Overview
 
 The Transformer model is a state-of-the-art neural network architecture designed for sequence-to-sequence tasks, such as machine translation. It utilizes the self-attention mechanism to capture long-range dependencies and improve parallelization, making it highly efficient and effective for processing sequential data.
