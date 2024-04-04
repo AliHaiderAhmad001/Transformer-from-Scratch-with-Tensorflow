@@ -13,6 +13,8 @@ This repository contains an implementation of the Transformer model, as describe
 
 The Transformer model is a state-of-the-art neural network architecture designed for sequence-to-sequence tasks, such as machine translation. It utilizes the self-attention mechanism to capture long-range dependencies and improve parallelization, making it highly efficient and effective for processing sequential data.
 
+**Important Note:** The goal of this project is to provide a deep understanding of the Transformers architecture and its inner workings. So, it's mainly for educational purposes. You can fully understand the structure and working mechanism of this model here, and use the components I have implemented in your projects.
+
 ## Features
 
 - Implementation of the Transformer model from scratch in TensorFlow 2.
